@@ -15,6 +15,8 @@
   * mysqlclient
   
   * pandas
+  
+  * wsgi (not sure)
 
  
 ## ENV.
@@ -30,3 +32,11 @@
  * javascript es6
 
 
+## Database
+
+ * https://www.erdcloud.com/d/aBCvizucRmM7xC7cw
+ 
+## Log
+
+ * 12/25 
+   - Category jasonify complete (apache <=> flask)
