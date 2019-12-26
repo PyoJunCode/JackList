@@ -1,45 +1,105 @@
 from flask import Flask
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker, relationship, backref
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column
 from flask_cors import CORS
 from flask import jsonify
+from marshmallow_sqlalchemy import ModelSchema
+import marshmallow as ma
+
 
 import pandas as encjson
 import requests
 import json
 
+url ='mysql://root:fhrmdls123@localhost:3306/rakuten?charset=utf8'
 
 
 app = Flask(__name__)
-CORS(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-url ='mysql://root:fhrmdls123@localhost:3306/rakuten?charset=utf8'
-#app.config['SQLALCHEMY_DATABASE_URI'] = url
+CORS(app)
+db = SQLAlchemy(app)
+
 
 engine = create_engine(url)
+Base = declarative_base()
+
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind = engine)
+session = Session()
+
+categories = None
+itemRanking = None
+
+#===========================Database Model===================================
+class Category(db.Model):
+
+    __tablename__ = 'categoryTest'
+    id = db.Column(db.Integer, primary_key=True)
+    genreId = db.Column(db.Integer)
+    cateName = db.Column(db.String(50))
+    parentId = db.Column(db.Integer, db.ForeignKey('categoryTest.id'))
+    depth = db.Column(db.Integer)
+    children = db.relationship('Category', remote_side=[parentId])
+   
+class CateSchema(ModelSchema):
+   
+    class Meta(ModelSchema.Meta):
+        model = Category
+        dump_only = ('id',)
+
+#==============================================================================
+
+
+#===========================Load Data==========================================
+
+def get_cate():
+    
+    data = Category.query.all()
+    category_schema = CateSchema(many=True)
+    output = category_schema.dump(data)
+    return output
+    
 
 def get_ranking():
 
+
     data =  encjson.read_sql_query("SELECT * FROM product", engine)
-    
-    #print(json.loads(data.to_json(orient='records')))
- 
     return json.loads(data.to_json(orient='records'))
     
-#print(get_ranking())
 
-#db = SQLAlchemy(app)
+
+def load_data():
+
+    global categories
+    global itemRanking
+    categories = get_cate()
+    itemRanking = get_ranking()
+
+
+
+#==============================================================================
+
+#=================================Routing======================================
+
+load_data()
  
-search=requests.get('https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20170628?format=json&keyword=%E3%83%9D%E3%82%B1%E3%83%83%E3%83%88%E3%83%A2%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%BC&applicationId=1036855640468891236').json()
-
 @app.route('/', methods=['GET',])
 def index():
     
     return "<html><body><h1>working!</h1></body></html>"
 
-@app.route('/test', methods=['GET',])
-def test():
-    return jsonify(get_ranking())
+@app.route('/ranking', methods=['GET',])
+def ranking():
+    return jsonify(itemRanking)
+    
+    
+@app.route('/cate', methods=['GET',])
+def cate():
+  
+    return jsonify(categories)

@@ -17,8 +17,10 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     genreId = Column(Integer)
     cateName = Column(String(50))
-    parent = Column(Integer)
+    parentId = Column(Integer, ForeignKey('category.id'))
     depth = Column(Integer)
+    children = relationship("Category",
+     backref=backref('parent', remote_side=[id]))
     
     def __init__(self, genreId, cateName, parent, depth):
       
