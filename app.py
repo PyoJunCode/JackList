@@ -101,5 +101,5 @@ def ranking():
     
 @app.route('/cate', methods=['GET',])
 def cate():
-  
+    print(jsonify(categories))
     return jsonify(categories)

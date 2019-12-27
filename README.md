@@ -40,3 +40,5 @@
 
  * 12/25 
    - Category jasonify complete (apache <=> flask)
+ * 12/26
+   - Product, Ranking Table DB ing
