@@ -1,4 +1,6 @@
 # JackList Internship Web Development
+### Build ALL-IN-ONE online shopping site by using API
+   
 
 ## python dependency
 
@@ -38,7 +40,16 @@
  
 ## Log
 
+ * ~12/24
+   - Fundamental Step:
+     - environment settings, 
+     - analyze API, 
+     - make overall DB and Web Structures
  * 12/25 
    - Category jasonify complete (apache <=> flask)
  * 12/26
-   - Product, Ranking Table DB ing
+   - modified Product, Ranking Table DB  structure
+ * 12/27
+   - DB : ranking <=> rankList <=> products relationship setting complete
+   - changed some DB structures
+   - Flask : return selected_category's item ranking in JSON complete

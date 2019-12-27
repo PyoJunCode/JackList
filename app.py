@@ -15,13 +15,20 @@ import pandas as encjson
 import requests
 import json
 
+
+
 url ='mysql://root:fhrmdls123@localhost:3306/rakuten?charset=utf8'
 
 
 app = Flask(__name__)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0')
+    load_data()
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 CORS(app)
 db = SQLAlchemy(app)
 
@@ -64,6 +71,9 @@ def get_cate():
     category_schema = CateSchema(many=True)
     output = category_schema.dump(data)
     return output
+
+#def get_latest_ranking():
+
     
 
 def get_ranking():
@@ -72,7 +82,9 @@ def get_ranking():
     data =  encjson.read_sql_query("SELECT * FROM product", engine)
     return json.loads(data.to_json(orient='records'))
     
-
+def get_selected_ranking():
+    data = encjson.read_sql_query("SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.genreId, r.ranking AS product, r.itemCode  FROM product AS p LEFT JOIN ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = 560198;", engine)
+    return json.loads(data.to_json(orient='records'))
 
 def load_data():
 
@@ -87,11 +99,10 @@ def load_data():
 
 #=================================Routing======================================
 
-load_data()
+
  
 @app.route('/', methods=['GET',])
 def index():
-    
     return "<html><body><h1>working!</h1></body></html>"
 
 @app.route('/ranking', methods=['GET',])
@@ -103,3 +114,11 @@ def ranking():
 def cate():
     print(jsonify(categories))
     return jsonify(categories)
+    
+
+@app.route('/selected_ranking', methods=['GET',])
+def selected_ranking():
+    print(str(get_selected_ranking()))
+    return jsonify(get_selected_ranking())
+
+
