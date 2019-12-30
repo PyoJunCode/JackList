@@ -21,17 +21,17 @@
   * wsgi (not sure)
 
  
-## ENV.
+## ENV
 
- * macOS Catalina 10.15
+* macOS Catalina 10.15.x
  
- * python3.7.4
+ * python 3.7.4
  
- * MySQL5.7.28
+ * MySQL 5.7.28
  
  * apache 2.4.41
  
- * javascript es6
+ * javascript
 
 
 ## Database
@@ -46,10 +46,21 @@
      - analyze API, 
      - make overall DB and Web Structures
  * 12/25 
-   - Category jasonify complete (apache <=> flask)
+   - Category get and push to MySQL DB
+   - Category jasonify and return complete (apache <=> flask)
  * 12/26
    - modified Product, Ranking Table DB  structure
+   - crawl products information for every category and push to DB
  * 12/27
    - DB : ranking <=> rankList <=> products relationship setting complete
-   - changed some DB structures
-   - Flask : return selected_category's item ranking in JSON complete
+   - update products info when already exists
+   - changed overall DB structures
+   - Flask : return selected_category's item ranking in JSON
+   
+ * 12/30
+   - product table 'reviewAverage' added
+   - rakuten products list per category:  30 -> 120 changed
+   - rakuten API delay issue: interval 2 sec when JSON have 'error'
+     - working well, but frequent sleep when process almost done(sleep per API)
+     - take about 20 min (518cate * 4page API requests)  : need routing or threading?
+   -  get items info from latest date of rankling list 
