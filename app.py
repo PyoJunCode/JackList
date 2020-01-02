@@ -6,7 +6,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker, relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column , desc
 from flask_cors import CORS
-from flask import jsonify
+from flask import jsonify, request
 from marshmallow_sqlalchemy import ModelSchema
 import marshmallow as ma
 
@@ -47,11 +47,11 @@ selected_date = None
 #===========================Database Model===================================
 class Category(db.Model):
 
-    __tablename__ = 'categoryTest'
+    __tablename__ = 'rakuten_category'
     id = db.Column(db.Integer, primary_key=True)
     genreId = db.Column(db.Integer)
     cateName = db.Column(db.String(50))
-    parentId = db.Column(db.Integer, db.ForeignKey('categoryTest.id'))
+    parentId = db.Column(db.Integer, db.ForeignKey('rakuten_category.id'))
     depth = db.Column(db.Integer)
     children = db.relationship('Category', remote_side=[parentId])
    
@@ -64,7 +64,7 @@ class CateSchema(ModelSchema):
 
 class RankList(Base):
 
-    __tablename__ = 'ranklist'
+    __tablename__ = 'rakuten_ranklist'
     id = Column(Integer, primary_key=True)
     date = Column(Integer)
 
@@ -96,22 +96,22 @@ def get_cate():
 def get_ranking():
 
     
-    data =  encjson.read_sql_query('SELECT * FROM ranklist', engine)
+    data =  encjson.read_sql_query('SELECT * FROM rakuten_ranklist', engine)
     return json.loads(data.to_json(orient='records'))
     
-def get_selected_ranking():
+def get_selected_ranking(data):
 
     session.commit()
     print(str(session.query(RankList).order_by(desc('date')).first().date))
     selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
     
     
-    selected_genre = '101381'
+    selected_genre = data
     
     
     print('select from ' + str(session.query(RankList).order_by(desc('date')).first().date) )
     
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM product AS p LEFT JOIN ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p LEFT JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
     
     
     data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
@@ -153,7 +153,7 @@ def cate():
 
 @app.route('/selected_ranking', methods=['GET',])
 def selected_ranking():
-    
-    return jsonify(get_selected_ranking())
+    data = request.args.get('genreId')
+    return jsonify(get_selected_ranking(data))
 
 

@@ -63,4 +63,10 @@
    - rakuten API delay issue: interval 2 sec when JSON have 'error'
      - working well, but frequent sleep when process almost done(sleep per API)
      - take about 20 min (518cate * 4page API requests)  : need routing or threading?
-   -  get items info from latest date of rankling list 
+   - get items info from latest date of rankling list 
+   - root category added 
+   
+ * 1/2
+   - Yahoo Api started
+   - Yahoo! : *API returns JSONP type.* (JSON type : 2020 / 2 release and will be parameter change )
+   - rename MySQL tables 
