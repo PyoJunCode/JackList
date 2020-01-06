@@ -70,3 +70,23 @@
    - Yahoo Api started
    - Yahoo! : *API returns JSONP type.* (JSON type : 2020 / 2 release and will be parameter change )
    - rename MySQL tables 
+   
+ * 1/3
+   - Yahoo Category DB complete
+   - rename ORM classes and variables for multi sites
+   
+ * 1/6
+   - Yahoo complete:
+     - API not contains product's price => need one more API step 
+     - exist such differences with rakuten => equalization
+     - product don't need genreId ? testing item info API size (small, large)
+     - take too long time to update frequently
+     - exception 
+   - Flask modification for yahoo - complete
+
+
+  * Todo
+    - sort by time (in same day)
+    - ranking tracker (using rank table)
+    - keyword search
+    - Amazon overall system
