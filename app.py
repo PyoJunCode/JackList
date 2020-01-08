@@ -34,14 +34,13 @@ db = SQLAlchemy(app)
 
 
 engine = create_engine(url)
-Base = declarative_base()
 
-Base.metadata.create_all(engine)
 Session = sessionmaker(bind = engine)
 session = Session()
 
 rakuten_categories = None
 yahoo_categories = None
+amazon_categories = None
 itemRanking = None
 selected_date = None
 
@@ -78,31 +77,40 @@ class yahoo_CateSchema(ModelSchema):
         model = yahoo_Category
         dump_only = ('id',)
 
-class RankList(Base):
+
+class amazon_Category(db.Model):
+
+     __tablename__ = 'amazon_category'
+     id = Column(db.Integer, primary_key=True)
+     url = Column(db.String(150))
+     cateName = Column(db.String(50))
+     parentId = Column(db.Integer, ForeignKey('amazon_category.id'))
+     depth = Column(db.Integer)
+     children = relationship('amazon_Category', remote_side=[parentId])
+
+class amazon_CateSchema(ModelSchema):
+    class Meta(ModelSchema.Meta):
+        model = amazon_Category
+        dump_only = ('id',)
+
+class RankList(db.Model):
 
     __tablename__ = 'ranklist'
-    id = Column(Integer, primary_key=True)
-    date = Column(BigInteger)
+    id = Column(db.Integer, primary_key=True)
+    date = Column(db.BigInteger)
 
 
-    def __init__(self, date):
-    
-        self.date = date
-    
-    
-    
-    def __repr__(self):
-        return "<Product(date = '%s', ranking = '%s')>" % (self.date, self.ranking)
 #==============================================================================
 
 
-#===========================Load Data==========================================
+#===========================Functions==========================================
 
 def get_rakuten_cate():
     
     data = rakuten_Category.query.all()
     category_schema = rakuten_CateSchema(many=True)
     output = category_schema.dump(data)
+    
     return output
 
 def get_yahoo_cate():
@@ -110,26 +118,29 @@ def get_yahoo_cate():
     data = yahoo_Category.query.all()
     category_schema = yahoo_CateSchema(many=True)
     output = category_schema.dump(data)
+    
     return output
 
+def get_amazon_cate():
 
-#def get_latest_ranking():
-
+    data = amazon_Category.query.all()
+    category_schema = amazon_CateSchema(many=True)
+    output = category_schema.dump(data)
     
+    return output
+
 
 def get_rankList():
 
     data =  encjson.read_sql_query('SELECT * FROM ranklist', engine)
+    
     return json.loads(data.to_json(orient='records'))
     
 
+def get_rakuten_selected_ranking(data = 0):
 
-
-    
-def get_rakuten_selected_ranking(data):
-
-    session.commit()
-    print(str(session.query(RankList).order_by(desc('date')).first().date))
+   
+    #print(str(session.query(RankList).order_by(desc('date')).first().date))
     selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
     
     
@@ -138,57 +149,116 @@ def get_rakuten_selected_ranking(data):
     
     #print('select from ' + str(session.query(RankList).order_by(desc('date')).first().date) )
     
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p LEFT JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
     
     
     data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
+    
     return json.loads(data.to_json(orient='records'))
     
 
-def get_yahoo_selected_ranking(data):
+def get_yahoo_selected_ranking(data = 1):
 
-    session.commit()
-    print(str(session.query(RankList).order_by(desc('date')).first().date))
+
+    #print(str(session.query(RankList).order_by(desc('date')).first().date))
     selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
     
-    
-    selected_genre = data
+    if data == None or '':
+      data = '0'
+    else:
+      selected_genre = data
     
     
     #print('select from ' + str(session.query(RankList).order_by(desc('date')).first().date) )
     
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,     r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId =     '
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,  r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
     
     
     data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
+    
+    return json.loads(data.to_json(orient='records'))
+
+def get_amazon_selected_ranking(data = 1):
+
+   
+    #print(str(session.query(RankList).order_by(desc('date')).first().date))
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
+    
+    if data == None:
+      data = 0
+    else:
+      selected_genre = data
+    
+    
+    query = 'SELECT p.mediumImageUrls,  p.itemUrl, p.itemName,  r.ranking AS  product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName  WHERE r.genreId = '
+    
+    print(query)
+    data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
+    
     return json.loads(data.to_json(orient='records'))
 
 
-def test(keyword, arr):
+def rakuten_searched(keyword, arr):
+   
     list = tuple(arr)
+   
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
     
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
-    
-    key= keyword
+    key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
     
-    print(query + str(arr) + params)
+    #print(query + str(arr) + params)
     data = encjson.read_sql_query(query + str(arr) + params, engine)
+    
+    return json.loads(data.to_json(orient='records'))
+    
+
+def yahoo_searched(keyword, arr):
+    list = tuple(arr)
+ 
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS     product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode     WHERE r.genreId IN '
+    
+    key= str(keyword)
+    params = " AND itemName LIKE '%%" + key + "%%'"
+    
+    
+    #print(query + str(arr) + params)
+    data = encjson.read_sql_query(query + str(arr) + params, engine)
+    
     return json.loads(data.to_json(orient='records'))
 
+
+def amazon_searched(keyword, arr):
+
+     list = tuple(arr)
+    
+     query = 'SELECT p.mediumImageUrls,  p.itemUrl, p.itemName,  r.ranking AS  product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName  WHERE r.genreId IN '
+     
+     key= str(keyword)
+     params = " AND itemName LIKE '%%" + key + "%%'"
+     
+     
+     #print(query + str(arr) + params)
+     data = encjson.read_sql_query(query + str(arr) + params, engine)
+     
+     return json.loads(data.to_json(orient='records'))
+ 
+
+##========================load data =============================
 def load_data():
 
     global rakuten_categories
     global yahoo_categories
+    global amazon_categories
     global itemRanking
     yahoo_categories = get_yahoo_cate()
     rakuten_categories = get_rakuten_cate()
+    amazon_categories = get_amazon_cate()
     itemRanking = get_rankList()
+    
 
-
-
-#==============================================================================
+#====================================================================
 
 #=================================Routing======================================
 load_data()
@@ -207,37 +277,64 @@ def ranking():
 @app.route('/rakuten_cate', methods=['GET',])
 def rakuten_cate():
     
-    print(jsonify(rakuten_categories))
+    
     return jsonify(rakuten_categories)
     
 
 @app.route('/yahoo_cate', methods=['GET',])
 def yahoo_cate():
     
-    print(jsonify(yahoo_categories))
+   
     return jsonify(yahoo_categories)
     
+
+@app.route('/amazon_cate', methods=['GET',])
+def amazon_cate():
+    
+    return jsonify(amazon_categories)
 
 @app.route('/rakuten_selected_ranking', methods=['GET',])
 def rakuten_selected_ranking():
     data = request.args.get('genreId')
+    if request.args.get('genreId') == '':
+      data = '0'
+   
     return jsonify(get_rakuten_selected_ranking(data))
 
 @app.route('/yahoo_selected_ranking', methods=['GET',])
 def yahoo_selected_ranking():
+
     data = request.args.get('genreId')
+    if request.args.get('genreId') == '':
+      data = '0'
     return jsonify(get_yahoo_selected_ranking(data))
+
+@app.route('/amazon_selected_ranking', methods=['GET',])
+def amazon_selected_ranking():
+
+    data = request.args.get('genreId')
+    if request.args.get('genreId') == '':
+      data = '0'
+    return jsonify(get_amazon_selected_ranking(data))
     
-    
-@app.route('/rakuten_searched', methods=['GET', 'POST']) # url, post both
+@app.route('/rakuten_searched', methods=['GET', 'POST'])
 def rakuten_searched():
     arr = request.form['genreId']
+
     keyword = request.args.get('genreId')
-    return jsonify(test(keyword, arr))
+    return jsonify(rakuten_searched(keyword, arr))
     
 
-@app.route('/rakuten_searched', methods=['GET', 'POST']) # url, post both
+@app.route('/yahoo_searched', methods=['GET', 'POST'])
 def yahoo_searched():
     arr = request.form['genreId']
+
     keyword = request.args.get('genreId')
-    return jsonify(test(keyword, arr))
+    return jsonify(yahoo_searched(keyword, arr))
+
+@app.route('/amazon_searched', methods=['GET', 'POST'])
+def amazon_searched():
+    arr = request.form['genreId']
+
+    keyword = request.args.get('genreId')
+    return jsonify(amazon_searched(keyword, arr))

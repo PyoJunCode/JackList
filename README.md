@@ -89,19 +89,27 @@
     - combine date & time format for select latest data ->  desc ordering and select
     - Threading issue
     - Amazon RSS (HARD)
-      - No genreId, Img, price and cateogories API
+      - No genreId, Img, price and cateogories API = > use selenium
       - Categories -> traverse by bs4 crawler : fail -> use selenium
       - different DB structure (NO genreId using id instead)
       - selenium: category URL -> rss input -> rss output -> parsing XML -> DB
       - Problem : rss not allow new request per 1 hour => only Big categories
         - partition original url with '/' -> working
       - products maybe not sorted by ranking?
+      
+    * 1/8
+      - Drop category table if already exists when update
+      - amazon update_products issue 
+        - digital music category API not working
+        - food category not working (can't read in For loop  WHY????????)
+      -  flask server issue fixed (Base => db.Model)
 
   * Todo
-    - sort by time (in same day)
     - ranking tracker (using rank table)
     - keyword search
-    - Amazon overall system
     - Threading
     - products maybe not sorted by ranking?
 
+  * Issue
+    - amazon 食品・飲料・お酒 category can't read in For loop(WHY??)
+    - 
