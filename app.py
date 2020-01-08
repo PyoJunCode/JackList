@@ -198,51 +198,57 @@ def get_amazon_selected_ranking(data = 1):
     return json.loads(data.to_json(orient='records'))
 
 
-def rakuten_searched(keyword, arr):
+def get_rakuten_searched(keyword, arr):
    
     list = tuple(arr)
-   
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
-    
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
     key= str(keyword)
-    params = " AND itemName LIKE '%%" + key + "%%'"
+    params = " AND r.itemName LIKE '%%" + key + "%%'"
     
-    
-    #print(query + str(arr) + params)
-    data = encjson.read_sql_query(query + str(arr) + params, engine)
-    
+    if '0' in list :
+      query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId  '
+      data = encjson.read_sql_query(query + params + selected_date, engine)
+    else:
+      query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
+      data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
+      
+      
     return json.loads(data.to_json(orient='records'))
     
 
-def yahoo_searched(keyword, arr):
+def get_yahoo_searched(keyword, arr):
+
     list = tuple(arr)
- 
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS     product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode     WHERE r.genreId IN '
-    
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
     key= str(keyword)
-    params = " AND itemName LIKE '%%" + key + "%%'"
+    params = " AND r.itemName LIKE '%%" + key + "%%'"
     
-    
-    #print(query + str(arr) + params)
-    data = encjson.read_sql_query(query + str(arr) + params, engine)
-    
+    if '1' in list :
+      query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId  '
+      data = encjson.read_sql_query(query + params + selected_date, engine)
+    else:
+      query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
+      data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
+      
     return json.loads(data.to_json(orient='records'))
 
 
-def amazon_searched(keyword, arr):
-
-     list = tuple(arr)
+def get_amazon_searched(keyword,arr):
     
-     query = 'SELECT p.mediumImageUrls,  p.itemUrl, p.itemName,  r.ranking AS  product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName  WHERE r.genreId IN '
-     
-     key= str(keyword)
-     params = " AND itemName LIKE '%%" + key + "%%'"
-     
-     
-     #print(query + str(arr) + params)
-     data = encjson.read_sql_query(query + str(arr) + params, engine)
-     
-     return json.loads(data.to_json(orient='records'))
+    list = tuple(arr)
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date)
+    key= str(keyword)
+    params = " AND r.itemName LIKE '%%" + key + "%%'"
+    
+    if '1' in list :
+      query = 'SELECT p.mediumImageUrls, p.itemUrl, p.itemName, r.ranking AS product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName WHERE r.genreId '
+      data = encjson.read_sql_query(query + params + selected_date, engine)
+    else:
+      query = 'SELECT p.mediumImageUrls, p.itemUrl, p.itemName, r.ranking AS product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName WHERE r.genreId IN '
+      data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
+      
+      
+    return json.loads(data.to_json(orient='records'))
  
 
 ##========================load data =============================
@@ -317,24 +323,29 @@ def amazon_selected_ranking():
       data = '0'
     return jsonify(get_amazon_selected_ranking(data))
     
-@app.route('/rakuten_searched', methods=['GET', 'POST'])
+@app.route('/rakuten_searched', methods=['GET', 'POST',])
 def rakuten_searched():
-    arr = request.form['genreId']
 
-    keyword = request.args.get('genreId')
-    return jsonify(rakuten_searched(keyword, arr))
+    keyword = str(request.args.get('keyword'))
+    arr = request.json
+    
+    return jsonify(get_rakuten_searched(keyword, arr))
     
 
-@app.route('/yahoo_searched', methods=['GET', 'POST'])
+@app.route('/yahoo_searched', methods=['GET', 'POST',])
 def yahoo_searched():
-    arr = request.form['genreId']
 
-    keyword = request.args.get('genreId')
-    return jsonify(yahoo_searched(keyword, arr))
+    keyword = str(request.args.get('keyword'))
+    arr = request.json
+  
+    return jsonify(get_yahoo_searched(keyword,arr))
+    
 
-@app.route('/amazon_searched', methods=['GET', 'POST'])
+@app.route('/amazon_searched', methods=['GET', 'POST',])
 def amazon_searched():
-    arr = request.form['genreId']
-
-    keyword = request.args.get('genreId')
-    return jsonify(amazon_searched(keyword, arr))
+    
+    keyword = str(request.args.get('keyword'))
+    arr = request.json
+    
+      
+    return jsonify(get_amazon_searched(keyword, arr))
