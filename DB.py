@@ -66,10 +66,10 @@ class rakuten_Product(Base):
     itemUrl = Column(String(200))
     reviewCount = Column(Integer)
     reviewAverage = Column(String(5))
-    genreId = Column(Integer)
+   
     itemInfo = relationship('rakuten_Ranking' , back_populates='product')
 
-    def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage, genreId):
+    def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
 
         self.itemCode = itemCode
         self.mediumImageUrls = mediumImageUrls
@@ -78,11 +78,11 @@ class rakuten_Product(Base):
         self.itemUrl = itemUrl
         self.reviewCount = reviewCount
         self.reviewAverage = reviewAverage
-        self.genreId = genreId
+     
 
 
     def __repr__(self):
-        return "<rakuten_Product(itemCode = '%s' mediumImageUrls = '%s', itemPrice = '%s' itemName = '%s', itemUrl='%s', reviewCount = '%s', reviewAVERAGE = '%s', genreId = '%s')>" % (self.itemCode,     self.mediumImageUrls, self.itemPrice, self.itemName, self.itemUrl, self.reviewCount, self.reviewAverage, self.genreId)
+        return "<rakuten_Product(itemCode = '%s' mediumImageUrls = '%s', itemPrice = '%s' itemName = '%s', itemUrl='%s', reviewCount = '%s', reviewAVERAGE = '%s', genreId = '%s')>" % (self.itemCode,     self.mediumImageUrls, self.itemPrice, self.itemName, self.itemUrl, self.reviewCount, self.reviewAverage)
 
 class rakuten_Ranking(Base):
 
