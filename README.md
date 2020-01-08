@@ -1,6 +1,6 @@
 # JackList Internship Web Development
 ### Build ALL-IN-ONE online shopping site by using API
-   
+  Overall Structure : check PDF
 
 ## python dependency
 
