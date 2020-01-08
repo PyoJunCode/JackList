@@ -1,6 +1,6 @@
 from flask import Flask
 
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, BigInteger
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
@@ -42,7 +42,7 @@ session = Session()
 
 rakuten_categories = None
 yahoo_categories = None
-rakuten_itemRanking = None
+itemRanking = None
 selected_date = None
 
 #===========================Database Model===================================
@@ -82,7 +82,7 @@ class RankList(Base):
 
     __tablename__ = 'ranklist'
     id = Column(Integer, primary_key=True)
-    date = Column(Integer)
+    date = Column(BigInteger)
 
 
     def __init__(self, date):
@@ -117,7 +117,7 @@ def get_yahoo_cate():
 
     
 
-def get_rakuten_Ranking():
+def get_rankList():
 
     data =  encjson.read_sql_query('SELECT * FROM ranklist', engine)
     return json.loads(data.to_json(orient='records'))
@@ -157,30 +157,34 @@ def get_yahoo_selected_ranking(data):
     
     #print('select from ' + str(session.query(RankList).order_by(desc('date')).first().date) )
     
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,     r.itemCode  FROM yahoo_product AS p LEFT JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId =     '
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,     r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId =     '
     
     
     data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
     return json.loads(data.to_json(orient='records'))
 
 
-def test():
-    arr = (1,2,3)
-    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p LEFT JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
+def test(keyword, arr):
+    list = tuple(arr)
     
-    print(query + str(arr))
-    data = encjson.read_sql_query(query + str(arr), engine)
+    query = 'SELECT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
     
+    key= keyword
+    params = " AND itemName LIKE '%%" + key + "%%'"
+    
+    
+    print(query + str(arr) + params)
+    data = encjson.read_sql_query(query + str(arr) + params, engine)
+    return json.loads(data.to_json(orient='records'))
 
 def load_data():
 
     global rakuten_categories
     global yahoo_categories
-    global rakuten_itemRanking
+    global itemRanking
     yahoo_categories = get_yahoo_cate()
     rakuten_categories = get_rakuten_cate()
-    #yahoo_itemRanking = get_yahoo_Ranking()
-    rakuten_itemRanking = get_rakuten_Ranking()
+    itemRanking = get_rankList()
 
 
 
@@ -188,7 +192,8 @@ def load_data():
 
 #=================================Routing======================================
 load_data()
- 
+
+
 @app.route('/', methods=['GET',])
 def index():
     return "<html><body><h1>working!</h1></body></html>"
@@ -196,7 +201,7 @@ def index():
 @app.route('/ranking', methods=['GET',])
 def ranking():
     
-    return jsonify(get_rakuten_Ranking())
+    return jsonify(get_rankList())
     
     
 @app.route('/rakuten_cate', methods=['GET',])
@@ -224,7 +229,15 @@ def yahoo_selected_ranking():
     return jsonify(get_yahoo_selected_ranking(data))
     
     
-@app.route('/yahoo_searched', methods=['GET','POST']) # url, post both
+@app.route('/rakuten_searched', methods=['GET', 'POST']) # url, post both
+def rakuten_searched():
+    arr = request.form['genreId']
+    keyword = request.args.get('genreId')
+    return jsonify(test(keyword, arr))
+    
+
+@app.route('/rakuten_searched', methods=['GET', 'POST']) # url, post both
 def yahoo_searched():
-    data = request.args.get('genreId')
-    return jsonify(get_yahoo_selected_ranking(data))
+    arr = request.form['genreId']
+    keyword = request.args.get('genreId')
+    return jsonify(test(keyword, arr))

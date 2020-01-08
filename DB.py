@@ -1,12 +1,17 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, desc
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, desc, BigInteger
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship, backref, aliased
 from sqlalchemy.ext.declarative import declarative_base
 from marshmallow_sqlalchemy import ModelSchema
+from selenium import webdriver
+from bs4 import BeautifulSoup
 import marshmallow as ma
 from flask import jsonify
 import datetime
 import time
+import threading
+import xmltodict
+import re
 
 import pandas as encjson
 import requests
@@ -16,11 +21,13 @@ import json
 
 
 url ='mysql://root:fhrmdls123@localhost:3306/rakuten?charset=utf8'
-engine = create_engine(url)
+engine = create_engine(url, pool_size = 20, pool_recycle= 500)
 Base = declarative_base()
 
 
-##===================ORM CLASS=======================
+
+##==================================================ORM CLASS=======================================================
+
 class rakuten_Category(Base):
 
     __tablename__ = 'rakuten_category'
@@ -82,39 +89,20 @@ class rakuten_Ranking(Base):
     itemCode = Column(String(50), ForeignKey('rakuten_product.itemCode'))
     ranking = Column(Integer)
     genreId = Column(Integer)
-    date = Column(Integer)
-    time = Column(String(10))
+    date = Column(BigInteger)
     product = relationship('rakuten_Product', back_populates='itemInfo', foreign_keys=[itemCode])
 
 
-    def __init__(self,itemCode, ranking, genreId, date, time):
+    def __init__(self,itemCode, ranking, genreId, date):
 
         self.itemCode = itemCode
         self.ranking = ranking
         self.genreId = genreId
         self.date = date
-        self.time = time
 
 
     def __repr__(self):
-        return "<rakuten_Product(itemCode = '%s', ranking = '%s', genreId = '%s',date = '%s', time = '%s')>" % (self.itemCode, self.ranking, self.genreId, self.date, self.time)
-
-
-class RankList(Base):
-
-    __tablename__ = 'ranklist'
-    id = Column(Integer, primary_key=True)
-    date = Column(Integer)
-
-
-    def __init__(self, date):
-
-        self.date = date
-
-
-
-    def __repr__(self):
-        return "<rakuten_Product(date = '%s', ranking = '%s')>" % (self.date, self.ranking)
+        return "<rakuten_Product(itemCode = '%s', ranking = '%s', genreId = '%s',date = '%s')>" % (self.itemCode, self.ranking, self.genreId, self.date)
 
 
 class yahoo_Category(Base):
@@ -137,13 +125,7 @@ class yahoo_Category(Base):
 
     def __repr__(self):
         return "<yahoo_Category(genreId = '%s', cateName = '%s' parentId = '%s', depth = '%s')>" % (self.genreId, self.cateName, self.parentId, self.depth)
-
-class yahoo_CateSchema(ModelSchema):
-    class Meta:
-        model = yahoo_Category
-        
-        
-
+ 
 class yahoo_Product(Base):
 
     __tablename__ = 'yahoo_product'
@@ -180,41 +162,128 @@ class yahoo_Ranking(Base):
     itemCode = Column(String(100), ForeignKey('yahoo_product.itemCode'))
     ranking = Column(Integer)
     genreId = Column(Integer)
-    date = Column(Integer)
-    time = Column(String(10))
+    date = Column(BigInteger)
     product = relationship('yahoo_Product', back_populates='itemInfo', foreign_keys=[itemCode])
 
 
-    def __init__(self,itemCode, ranking, genreId, date, time):
+    def __init__(self,itemCode, ranking, genreId, date):
 
         self.itemCode = itemCode
         self.ranking = ranking
         self.genreId = genreId
         self.date = date
-        self.time = time
 
 
     def __repr__(self):
-        return "<yahoo_Product(itemCode = '%s', ranking = '%s', genreId = '%s',date = '%s', time = '%s')>" % (self.itemCode, self.ranking, self.genreId, self.date, self.time)
+        return "<yahoo_Ranking(itemCode = '%s', ranking = '%s', genreId = '%s',date = '%s')>" % (self.itemCode, self.ranking, self.genreId, self.date)
 
-##====================================================
+       
+class amazon_Category(Base):
+
+    __tablename__ = 'amazon_category'
+    id = Column(Integer, primary_key=True)
+    url = Column(String(150))
+    cateName = Column(String(50))
+    parentId = Column(Integer, ForeignKey('amazon_category.id'))
+    depth = Column(Integer)
+    children = relationship('amazon_Category', remote_side=[parentId])
+    
+    
+    def __init__(self, url, cateName, parentId, depth):
+    
+        self.url = url
+        self.cateName = cateName
+        self.parentId = parentId
+        self.depth = depth
+    
+    def __repr__(self):
+        return "<amazon_Category(url = '%s', cateName = '%s' parentId = '%s', depth = '%s')>" % (self.url, self.cateName, self.parentId, self.depth)
+    
+class amazon_Product(Base):
+
+    __tablename__ = 'amazon_product'
+    id = Column(Integer, primary_key=True)
+  
+    mediumImageUrls = Column(String(200))
+   
+    itemName = Column(String(255), unique = True)
+    itemUrl = Column(String(200))
+   
+    itemInfo = relationship('amazon_Ranking' , back_populates='product')
+ 
+    def __init__(self,  mediumImageUrls,itemName, itemUrl):
+ 
+
+        self.mediumImageUrls = mediumImageUrls
+
+        self.itemName = itemName
+        self.itemUrl = itemUrl
+
+ 
+ 
+    def __repr__(self):
+        return "<amazon_Product(mediumImageUrls = '%s', itemName = '%s', itemUrl='%s')>" % (   self.mediumImageUrls, self.itemName, self.itemUrl)
+
+class amazon_Ranking(Base):
+
+    __tablename__ = 'amazon_product_ranking'
+    id = Column(Integer, primary_key=True)
+    itemName = Column(String(100), ForeignKey('amazon_product.itemName'))
+    ranking = Column(Integer)
+    genreId = Column(Integer)
+    date = Column(BigInteger)
+    product = relationship('amazon_Product', back_populates='itemInfo', foreign_keys=[itemName])
+    
+    
+    def __init__(self,itemName, ranking, genreId, date):
+    
+        self.itemName = itemName
+        self.ranking = ranking
+        self.genreId = genreId
+        self.date = date
+    
+    
+    def __repr__(self):
+        return "<amazon_Ranking(itemName = '%s', ranking = '%s', genreId = '%s',date = '%s')>" % (self.itemName, self.ranking,     self.genreId, self.date)
 
 
 
+class RankList(Base):
 
-##=================initialize model===================
+    __tablename__ = 'ranklist'
+    id = Column(Integer, primary_key=True)
+    date = Column(BigInteger)
+
+    def __init__(self, date):
+        self.date = date
+    def __repr__(self):
+        return "<RankList(date = '%s')>" % (self.date)
+
+
+
+##====================================================================================================
+
+##=================================================initialize model==================================
 
 Base.metadata.create_all(engine)
-Session = sessionmaker(bind = engine)
+session_factory = sessionmaker(autocommit = False, autoflush = False,bind = engine)
+Session = scoped_session(session_factory)
 session = Session()
 
-##====================================================
+options = webdriver.ChromeOptions()
+options.add_argument('headless')
+options.add_argument('window-size=1920x1080')
+options.add_argument("disable-gpu")
+options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
+
+##====================================================================================================
 
 
 
 
 
-##================ rakuten api links=============================
+
+##================================= rakuten api links===================================================
 
 rakuten_rankingBaseUrl = 'https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20170628?format=json&genreId='
 
@@ -232,7 +301,8 @@ rakuten_root_cate = requests.get('https://app.rakuten.co.jp/services/api/IchibaG
 
 rakuten_cate = rakuten_root_cate['children']
 
-#=================== Yahoo api links ===========================
+#============================================== Yahoo api links ========================================
+
 yahoo_rankingBaseUrl = 'https://shopping.yahooapis.jp/ShoppingWebService/V1/json/categoryRanking?appid=dj00aiZpPTh4SUJUQkJvRGV5ZyZzPWNvbnN1bWVyc2VjcmV0Jng9MTU-&category_id='
 
 yahoo_itemBaseUrl = 'http://shopping.yahooapis.jp/ShoppingWebService/V1/json/itemLookup?appid=dj00aiZpPTh4SUJUQkJvRGV5ZyZzPWNvbnN1bWVyc2VjcmV0Jng9MTU-&responsegroup=small&itemcode='
@@ -242,15 +312,15 @@ yahoo_genreBaseUrl ='https://shopping.yahooapis.jp/ShoppingWebService/V1/json/ca
 yahoo_root_cate = requests.get('https://shopping.yahooapis.jp/ShoppingWebService/V1/json/categorySearch?appid=dj00aiZpPTh4SUJUQkJvRGV5ZyZzPWNvbnN1bWVyc2VjcmV0Jng9MTU-&category_id=1').json() # root yahoo_Category
 
 yahoo_cate = yahoo_root_cate['ResultSet']['0']['Result']['Categories']['Children']
-##==============================================================
+##============================================================================================
 
-##=====================Update rakuten_Category Info==============
+##=============================Update Category Info===========================================
 def update_yahoo_cate():
     
     for key,val in yahoo_cate.items():
       if(key[0] != '_'): ## filter
        
-        print(val['Title']['Short'] + ' id: ' + val['Id'])
+        print('yahoo ' + val['Title']['Short'] + ' id: ' + val['Id'])
         parent_id = val['Id']
         addCate = yahoo_Category(
                int(val['Id']),
@@ -261,7 +331,7 @@ def update_yahoo_cate():
         session.add(
         addCate
         )
-        session.commit()
+        #session.commit()
         depth2Cate = requests.get(yahoo_genreBaseUrl + str(parent_id)).json()
         depth2Cate_json = depth2Cate['ResultSet']['0']['Result']['Categories']['Children']
         for key,val in depth2Cate_json.items():
@@ -277,7 +347,7 @@ def update_yahoo_cate():
             session.add(
             addCate2
             )
-            session.commit()
+            #session.commit()
             
     
     #        parent2_id = val['Id']
@@ -290,7 +360,6 @@ def update_yahoo_cate():
     #              print('\t\t'+val['Title']['Short'] +' parent: ' + str(parent2_id))
     #              parent_id = val['Id']
     
-
 
 
 def update_rakuten_cate():
@@ -307,8 +376,8 @@ def update_rakuten_cate():
         session.add(
         addCate
         )
-        session.commit()
-        print(str(addCate.id) + " " + child['child']['genreName'] + " completed") ## progress debug
+        #session.commit()
+        print('rakuten ' +str(addCate.id) + " " + child['child']['genreName'] + " completed") ## progress debug
         child2Cate = requests.get(rakuten_genreBaseUrl+str(child['child']['genreId'])+ rakuten_genreParmas +rakuten_appId).json()
         for child2 in child2Cate['children']:
 
@@ -321,8 +390,82 @@ def update_rakuten_cate():
             session.add(
             addCate2
             )
-            session.commit()
+            #session.commit()
+            
+            
 
+def update_amazon_cate():
+
+    count = 0
+    url = 'https://www.amazon.co.jp/gp/bestsellers'
+    
+    driver = webdriver.Chrome('/Users/seojunpyo/Downloads/chromedriver', options=options)
+    driver.get(url)
+    
+    
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    
+    menu = soup.select('#zg_browseRoot > ul > li > a')
+    done = len(menu)
+    
+    for item in menu:
+        count += 1
+        print(item.text + ' ing...\t' + str(count) + '/' + str(done))
+        url2 = str(item['href'])
+        
+        addCate = amazon_Category(
+        url2,
+        item.text,
+        None,
+        1
+        )
+        session.add(
+        addCate
+        )
+        session.commit()
+#        driver.get(url2)
+#        soup2 = BeautifulSoup(driver.page_source, 'html.parser')
+#        menu2 = soup2.select('#zg_browseRoot > ul > ul >li > a')
+#
+#        for item2 in menu2:
+#           # print("\t" + item2.text)
+#            url3 = str(item2['href'])
+#
+#            addCate2 = amazon_Category(
+#            url3,
+#            item2.text,
+#            None,
+#            2
+#            )
+#            session.add(
+#            addCate2
+#            )
+            
+            
+#            driver.get(url3)
+#            soup3 = BeautifulSoup(driver.page_source, 'html.parser')
+#            menu3 = soup3.select('#zg_browseRoot > ul > ul > ul >li > a')
+#
+#            for item3 in menu3:
+#               # print("\t\t" + item3.text)
+#
+#                url4 = str(item3['href'])
+#
+#                addCate3 = amazon_Category(
+#                url4,
+#                item3.text,
+#                addCate2.id,
+#                3
+#                )
+#                session.add(
+#                addCate3
+#                )
+                
+    session.commit()
+    driver.quit()
+    print(count)
+    
+    
 #=====================for 5 depth ================================================
 
 
@@ -368,9 +511,9 @@ def update_rakuten_cate():
 
 
 ##===============================update rakuten products======================
-def update_rakuten_products():
+def update_rakuten_products(nowDate):
 
-    #filter = session.query(rakuten_Product).filter(rakuten_Category.parentId==1).join(rakuten_Category.parentId, aliased=True).filter(rakuten_Category.id==1)
+
     progress = 0
     selectGen = session.query(rakuten_Category.genreId).all()
 
@@ -378,9 +521,6 @@ def update_rakuten_products():
     genList.append(0) # add root cateogry
     errorList =[]
     done = len(genList)
-    now = datetime.datetime.now()
-    nowDate = now.strftime('%Y%m%d')
-    nowTime = now.strftime('%H:%M')
     
     
     for genre in genList:
@@ -388,10 +528,10 @@ def update_rakuten_products():
 
       for page in range(1,5): # 1~4page 120 products
 
-        print(str(genre) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
+        print('rakuten: ' + str(genre) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
         getRanking = requests.get(rakuten_rankingBaseUrl+ str(genre) + rakuten_rankingParams + str(page) +rakuten_appId).json()
         #for debug
-        if('error' in getRanking):
+        if('error' in getRanking): # error case
           if(getRanking['error'] == 'not_found'):
             print('\terror in: '+str(genre) + ' page_not_found')
             errorList.append(genre)
@@ -401,7 +541,7 @@ def update_rakuten_products():
             time.sleep(2)
             getRanking = requests.get(rakuten_rankingBaseUrl+ str(genre) + rakuten_rankingParams +rakuten_appId).json()
 
-        else:
+        else: # No error case
             Items = getRanking['Items']
 
  
@@ -418,7 +558,7 @@ def update_rakuten_products():
                     exists.first().genreId = item['Item']['genreId']
                     exists.first().mediumImageUrls = item['Item']['mediumImageUrls'][0]['imageUrl']
                     exists.first().reviewAverage = item['Item']['reviewAverage']
-                    session.commit()
+                    #session.commit()
                 else:
                     session.add(
                     rakuten_Product(
@@ -432,43 +572,33 @@ def update_rakuten_products():
                     genreId = item['Item']['genreId']
                            )
                     )
-                    session.commit()
+                    #session.commit()
 
                 #insert Into ranking
-                session.commit()
+                #session.commit()
                 session.add(
                 rakuten_Ranking(
                        itemCode = item['Item']['itemCode'],
                        ranking = item['Item']['rank'],
                        genreId = genre,
-                       date = int(nowDate),
-                       time = nowTime
+                       date = int(nowDate)
                        )
                 )
                 session.commit()
-
-    session.add(
-    RankList(
-    date = int(nowDate)
-    )
-    )
-    session.commit()
+               
     print('error list: ' + str(errorList))
-    print('complete !!!')
+    print('rakuten complete !!!')
 
 #================================update Yahoo products======================================
 
 
-def update_yahoo_product():
+def update_yahoo_products(nowDate):
 
-    now = datetime.datetime.now()
-    nowDate = now.strftime('%Y%m%d')
-    nowTime = now.strftime('%H:%M')
 
     progress = 0
     
     selectGen = session.query(yahoo_Category.genreId).all()
-    
+   
     genList = [value for (value,) in selectGen]
     genList.append(1) # add root cateogry
     errorCateList =[]
@@ -480,7 +610,7 @@ def update_yahoo_product():
 
       for page in range(0,5): # 1~4page 120 products
 
-        print(str(genre) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
+        print('Yahoo: '+str(genre) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
         
         getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre) + '&offset=' + str((page * 20))).json()
         yahoo_products = getRanking['ResultSet']['0']['Result']
@@ -502,7 +632,7 @@ def update_yahoo_product():
                     exists.first().reviewCount = val['Review']['Count']
                     exists.first().mediumImageUrls = yahoo_itemInfo['Image']['Small']
                     exists.first().reviewAverage = val['Review']['Rate']
-                    session.commit()
+                    #session.commit()
                 else:
                     session.add(
                     yahoo_Product(
@@ -516,7 +646,7 @@ def update_yahoo_product():
        
                            )
                     )
-                    session.commit()
+                    #session.commit()
                 #insert Into ranking
                 session.commit()
                 session.add(
@@ -524,32 +654,153 @@ def update_yahoo_product():
                        itemCode = val['Code'],
                        ranking = val['_attributes']['rank'],
                        genreId = genre,
-                       date = int(nowDate),
-                       time = nowTime
+                       date = int(nowDate)
                        )
                 )
               else: #debug
                 print(yahoo_itemInfo_url)
                 errorItemList.append(val['Code'])
             session.commit()
+   
              
         else: #debug
           print(getRanking)
-    print('complete !!!')
+    print('yahoo complete !!!')
 
+##=====================================================================================================
+
+##=================================update amazon products==============================================
+
+def update_amazon_products():
+
+    progress = 0
+    rss_url = 'https://am-tb.tk/amaranrss/'
+    driver = webdriver.Chrome('/Users/seojunpyo/Downloads/chromedriver', options=options)
+    driver.get(rss_url)
+    errorCateList = []
     
+    for cate in session.query(amazon_Category).all():
+          dict = cate.__dict__
+          input_url = dict['url'].rpartition('/')[0]
+          
+          print('cate: ' + dict['cateName'] + ' url: ' + dict['url'])
+          
+          driver.find_element_by_name('url').send_keys(input_url)
+          driver.find_element_by_class_name('setbutton').click()
+          output_url = driver.find_element_by_name('rss').get_attribute('value')
+          driver.find_element_by_name('url').clear()
+
+          items = xmltodict.parse(requests.get(output_url).text)
+          if('b' in items):
+            print(items)
+            errorCateList.append(dict['cateName'])
+          else:
+            
+            rank = 1
+            for item in items['rss']['channel']['item']:
+              pattern = re.compile('src="' + '.+' + '"')
+              match = pattern.search(item['description'])
+              url_result = match.group().split('"')[1]
+              exists = session.query(amazon_Product).filter_by(itemName=item['title'])
+              if(exists.scalar()):
+                 exists.first().itemName = item['title']
+   
+                 exists.first().itemUrl = item['link']
+               
+                 exists.first().mediumImageUrls = url_result
+     
+                 #session.commit()
+              else:
+                 session.add(
+                 yahoo_Product(
+                
+                 mediumImageUrls = url_result,
+               
+                 itemName = item['title'],
+                 
+                 itemUrl = item['link']
+    
+                        )
+                 )
+              session.add(
+              amazon_Ranking(
+              itemName = item['title'],
+              ranking = rank,
+              genreId = dict['id'],
+              date = 202001071150
+              )
+              )
+              rank += 1
+              session.commit()
+                
+    print('Complete')
+    print('Error category list: ' + str(errorCateList))
+
+##=====================================================================================================
+
+
     
 def test():
     #filter = session.query(rakuten_Ranking).filter(rakuten_Ranking.genreId==101381).join(rakuten_Product.itemName, aliased=True).filter(rakuten_Product.genreId=='101381')
     order = session.query(RankList).order_by(desc('date')).first().date
     print(str(order))
 
+def updateProducts():
+
+    now = datetime.datetime.now()
+    nowDate = now.strftime('%Y%m%d%H%M')
+   
+    
+    session.add(
+    RankList(
+    date = int(nowDate)
+    )
+    )
+    session.commit()
+    
+    update_rakuten_products(nowDate)
+    update_yahoo_products(nowDate)
+    update_amazon_products(nowDate)
+    
+#    th_rakuten_product = threading.Thread(target = update_rakuten_products, args=(nowDate,))
+#    th_yahoo_product = threading.Thread(target = update_yahoo_products, args=(nowDate,))
+#
+#    th_rakuten_product.start()
+#    th_yahoo_product.start()
+#
+#    th_rakuten_product.join()
+#    th_yahoo_product.join()
+    
+    print('products update completed... ' + nowDate + ' data created')
+    
+    
+def updateCategories():
+
+
+#    th_rakuten_cate = threading.Thread(target = update_rakuten_cate)
+#    th_yahoo_cate = threading.Thread(target = update_yahoo_cate)
+#
+#    th_rakuten_cate.start()
+#    th_yahoo_cate.start()
+#
+#    th_rakuten_cate.join()
+#    th_yahoo_cate.join()
+    
+    print('categories update completed')
+
+#now = datetime.datetime.now()
+#nowDate = now.strftime('%Y%m%d%H%M')
 
 #test()
 #update_rakuten_cate()
-#update_rakuten_products()
+#update_rakuten_products(nowDate)
 #update_yahoo_cate()
-update_yahoo_product()
+#update_yahoo_products(nowDate)
+#update_amazon_cate()
+update_amazon_products()
+
+
+#updateProducts()
 
 
 session.commit()
