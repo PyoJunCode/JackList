@@ -97,19 +97,20 @@
         - partition original url with '/' -> working
       - products maybe not sorted by ranking?
       
-    * 1/8
-      - Drop category table if already exists when update
-      - amazon update_products issue 
-        - digital music category API not working
-        - food category not working (can't read in For loop  WHY????????)
-      -  flask server issue fixed (Base => db.Model)
+  * 1/8
+    - Drop category table if already exists when update
+    - amazon update_products issue 
+      - digital music category API not working
+      - food category not working (can't read in For loop  WHY????????)
+    -  flask server issue fixed (Base => db.Model)
+    - key word search complete
+
 
   * Todo
     - ranking tracker (using rank table)
-    - keyword search
     - Threading
     - products maybe not sorted by ranking?
 
   * Issue
     - amazon 食品・飲料・お酒 category can't read in For loop(WHY??)
-    - 
+    
