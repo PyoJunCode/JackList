@@ -12,15 +12,18 @@ import time
 import threading
 import xmltodict
 import re
+import logging
+import logging.config
 
 import pandas as encjson
 import requests
 import json
 
 
+logging.config.fileConfig('logging.conf')
+logger = logging.getLogger('takeattendanceLogger')
 
-
-url ='mysql://root:fhrmdls123@localhost:3306/rakuten?charset=utf8'
+url ='mysql://root:@localhost:3306/jacklist?charset=utf8'
 engine = create_engine(url, pool_size = 20, pool_recycle= 500)
 Base = declarative_base()
 
@@ -66,7 +69,6 @@ class rakuten_Product(Base):
     itemUrl = Column(String(200))
     reviewCount = Column(Integer)
     reviewAverage = Column(String(5))
-   
     itemInfo = relationship('rakuten_Ranking' , back_populates='product')
 
     def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
@@ -208,7 +210,7 @@ class amazon_Product(Base):
     mediumImageUrls = Column(String(200))
    
     itemName = Column(String(255), unique = True)
-    itemUrl = Column(String(200))
+    itemUrl = Column(String(255))
    
     itemInfo = relationship('amazon_Ranking' , back_populates='product')
  
@@ -273,8 +275,9 @@ session = Session()
 #selenium
 options = webdriver.ChromeOptions()
 options.add_argument('headless')
-options.add_argument('window-size=1920x1080')
 options.add_argument("disable-gpu")
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
 options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
 
 ##========================================================================================
@@ -319,6 +322,9 @@ yahoo_cate = yahoo_root_cate['ResultSet']['0']['Result']['Categories']['Children
 
 
 def update_rakuten_cate():
+
+    rakuten_Category.__table__.drop(engine)
+    rakuten_Category.__table__.create(engine)
    
     for child in rakuten_cate:
        
@@ -332,11 +338,11 @@ def update_rakuten_cate():
         session.add(
         addCate
         )
-        #session.commit()
+        session.commit()
         print('rakuten ' +str(addCate.id) + " " + child['child']['genreName'] + " completed") ## progress debug
         child2Cate = requests.get(rakuten_genreBaseUrl+str(child['child']['genreId'])+ rakuten_genreParmas +rakuten_appId).json()
         for child2 in child2Cate['children']:
-
+            
             addCate2 = rakuten_Category(
             child2['child']['genreId'],
             "  " + child2['child']['genreName'],
@@ -346,7 +352,7 @@ def update_rakuten_cate():
             session.add(
             addCate2
             )
-            #session.commit()
+            session.commit()
 
                 
             #=====================for 5 depth ================================================
@@ -394,39 +400,42 @@ def update_rakuten_cate():
 
             
  
- def update_yahoo_cate():
- 
-     for key,val in yahoo_cate.items():
-       if(key[0] != '_'): ## filter
-     
-         print('yahoo ' + val['Title']['Short'] + ' id: ' + val['Id'])
-         parent_id = val['Id']
-         addCate = yahoo_Category(
-                int(val['Id']),
-                val['Title']['Short'],
-                1,
-                1
-                )
-         session.add(
-         addCate
-         )
-         #session.commit()
-         depth2Cate = requests.get(yahoo_genreBaseUrl + str(parent_id)).json()
-         depth2Cate_json = depth2Cate['ResultSet']['0']['Result']['Categories']['Children']
-         for key,val in depth2Cate_json.items():
-           if(key[0] != '_'): ## filter
-     
-             print('\t'+val['Title']['Short'] + ' id: ' +val['Id']+' parent: ' + str(parent_id))
-             addCate2 = yahoo_Category(
-                    int(val['Id']),
-                    "  " + val['Title']['Short'],
-                    addCate.id,
-                    2
-                    )
-             session.add(
-             addCate2
-             )
-             #session.commit()
+def update_yahoo_cate():
+
+    yahoo_Category.__table__.drop(engine)
+    yahoo_Category.__table__.create(engine)
+
+    for key,val in yahoo_cate.items():
+      if(key[0] != '_'): ## filter
+    
+        print('yahoo ' + val['Title']['Short'] + ' id: ' + val['Id'])
+        parent_id = val['Id']
+        addCate = yahoo_Category(
+               int(val['Id']),
+               val['Title']['Short'],
+               1,
+               1
+               )
+        session.add(
+        addCate
+        )
+        session.commit()
+        depth2Cate = requests.get(yahoo_genreBaseUrl + str(parent_id)).json()
+        depth2Cate_json =depth2Cate['ResultSet']['0']['Result']['Categories']['Children']
+        for key,val in depth2Cate_json.items():
+          if(key[0] != '_'): ## filter
+    
+            print('\t'+val['Title']['Short'] + ' id: ' +val['Id']+' parent: ' +str(parent_id))
+            addCate2 = yahoo_Category(
+                   int(val['Id']),
+                   "  " + val['Title']['Short'],
+                   addCate.id,
+                   2
+                   )
+            session.add(
+            addCate2
+            )
+            session.commit()
      
 ##================for depth 3============================
 
@@ -452,7 +461,7 @@ def update_amazon_cate():
     count = 0
     url = 'https://www.amazon.co.jp/gp/bestsellers'
     
-    driver = webdriver.Chrome('/Users/seojunpyo/Downloads/chromedriver', options=options)
+    driver = webdriver.Chrome('/usr/bin/chromedriver', options=options)
     driver.get(url)
     
     
@@ -526,7 +535,7 @@ def update_amazon_cate():
 ##===============================update rakuten products======================
 def update_rakuten_products(nowDate):
 
-
+    logger.info('update_rakuten_products_start')
     progress = 0
     selectGen = session.query(rakuten_Category.genreId).all()
 
@@ -534,7 +543,7 @@ def update_rakuten_products(nowDate):
     genList.append(0) # add root cateogry
     errorList =[]
     done = len(genList)
-    
+   
     
     for genre in genList:
       progress += 1
@@ -543,11 +552,13 @@ def update_rakuten_products(nowDate):
 
         print('rakuten: ' + str(genre) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
         getRanking = requests.get(rakuten_rankingBaseUrl+ str(genre) + rakuten_rankingParams + str(page) +rakuten_appId).json()
+       
         #for debug
         if('error' in getRanking): # error case
           if(getRanking['error'] == 'not_found'):
             print('\terror in: '+str(genre) + ' page_not_found')
             errorList.append(genre)
+            logger.info('\terror in: '+str(genre) + ' page_not_found')
             continue
           else:
             print('Too many requests. Sleep for 2 sec...')
@@ -569,10 +580,9 @@ def update_rakuten_products(nowDate):
                     exists.first().itemCode = item['Item']['itemCode']
                     exists.first().itemUrl = item['Item']['itemUrl']
                     exists.first().reviewCount = item['Item']['reviewCount']
-                    exists.first().genreId = item['Item']['genreId']
                     exists.first().mediumImageUrls = item['Item']['mediumImageUrls'][0]['imageUrl']
                     exists.first().reviewAverage = item['Item']['reviewAverage']
-                    #session.commit()
+                    session.commit()
                 else:
                     session.add(
                     rakuten_Product(
@@ -583,13 +593,13 @@ def update_rakuten_products(nowDate):
                     itemUrl = item['Item']['itemUrl'],
                     reviewCount = item['Item']['reviewCount'],
                     reviewAverage = item['Item']['reviewAverage'],
-                    genreId = item['Item']['genreId']
+ 
                            )
                     )
-                    #session.commit()
+                    session.commit()
 
                 #insert Into ranking
-                #session.commit()
+                session.commit()
                 session.add(
                 rakuten_Ranking(
                        itemCode = item['Item']['itemCode'],
@@ -602,13 +612,15 @@ def update_rakuten_products(nowDate):
                
     print('error list: ' + str(errorList))
     print('rakuten complete !!!')
+    logger.info('yahoo_product_update_complete !!!')
+    logger.info('error list: ' + errorItemList)
 
 #================================ update Yahoo products======================================
 
 
 def update_yahoo_products(nowDate):
 
-
+    logger.info('update_yahoo_products_start')
     progress = 0
     
     selectGen = session.query(yahoo_Category.genreId).all()
@@ -636,7 +648,7 @@ def update_yahoo_products(nowDate):
               if(int(yahoo_itemInfo_url['ResultSet']['totalResultsReturned']) != 0):
                
                 yahoo_itemInfo = yahoo_itemInfo_url['ResultSet']['0']['Result']['0']
-                title = (val['Name'][:50] + '..') if len(val['Name']) > 50 else var['Name']
+                title = (val['Name'][:50] + '..') if len(val['Name']) > 50 else val['Name']
        
                 if(exists.scalar()):
                     exists.first().itemName = title
@@ -646,7 +658,7 @@ def update_yahoo_products(nowDate):
                     exists.first().reviewCount = val['Review']['Count']
                     exists.first().mediumImageUrls = yahoo_itemInfo['Image']['Small']
                     exists.first().reviewAverage = val['Review']['Rate']
-                    #session.commit()
+                    session.commit()
                 else:
                     session.add(
                     yahoo_Product(
@@ -660,7 +672,7 @@ def update_yahoo_products(nowDate):
        
                            )
                     )
-                    #session.commit()
+                    session.commit()
                 #insert Into ranking
                 session.commit()
                 session.add(
@@ -668,11 +680,12 @@ def update_yahoo_products(nowDate):
                        itemCode = val['Code'],
                        ranking = val['_attributes']['rank'],
                        genreId = genre,
-                       date = int(nowDate)
+                       date = 202001090149
                        )
                 )
               else: #debug
                 print(yahoo_itemInfo_url)
+                logger.info('item_not_found ' + yahoo_itemInfo_url)
                 errorItemList.append(val['Code'])
             session.commit()
    
@@ -680,6 +693,8 @@ def update_yahoo_products(nowDate):
         else: #debug
           print(getRanking)
     print('yahoo complete !!!')
+    logger.info('yahoo_product_update_complete !!!')
+    logger.info('error list: ' + errorItemList)
 
 ##===============================================================================================
 
@@ -689,7 +704,7 @@ def update_amazon_products(nowDate):
 
     progress = 0
     rss_url = 'https://am-tb.tk/amaranrss/'
-    driver = webdriver.Chrome('/Users/seojunpyo/Downloads/chromedriver', options=options)
+    driver = webdriver.Chrome('/usr/bin/chromedriver', options=options)
     driver.get(rss_url)
     errorCateList = []
     list = []
@@ -830,13 +845,14 @@ def updateCategories():
 #update_rakuten_products(nowDate)
 #update_yahoo_cate()
 #update_yahoo_products(nowDate)
-#update_amazon_cate()
-#update_amazon_products(nowDate)
+update_amazon_cate()
+update_amazon_products(202001090149)
 
 ##=========================================
 
-#updateProducts()
+
 #updateCategories()
+#updateProducts()
 
 session.commit()
 session.close()

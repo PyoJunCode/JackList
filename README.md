@@ -18,10 +18,8 @@
   
   * pandas
   
-  * python-mysql
+  * wsgi (not sure)
 
-  * bs4, requests
-  
  
 ## ENV
 
@@ -39,11 +37,6 @@
 ## Database
 
  * https://www.erdcloud.com/d/aBCvizucRmM7xC7cw
- 
-## How to use
-
- * python3 => import db.py => updateCategories( ) or updateProducts( )
- * *(Should update category first when category db is empty)*
  
 ## Log
 
@@ -113,12 +106,6 @@
     - key word search complete
 
 
-  * 1/9
-    - product update logger added
-    - product update bug fixed
-    - **Server Setting**
-    - duplicated result when search fixed
-    
   * Todo
     - ranking tracker (using rank table)
     - Threading
@@ -126,6 +113,4 @@
 
   * Issue
     - amazon 食品・飲料・お酒 category can't read in For loop(WHY??)
-    - server /usr/bin/mysql, /var chmod 777 => security
-    - ranklist data can't update realtime? 
     
