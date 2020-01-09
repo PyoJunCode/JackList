@@ -104,6 +104,12 @@
       - food category not working (can't read in For loop  WHY????????)
     -  flask server issue fixed (Base => db.Model)
     - key word search complete
+    
+  * 1/9
+    - **Server migration setting complete**
+    - duplicate product result when searching fixed
+    - product sorted by ranking surely
+    - *prototype complete*
 
 
   * Todo
