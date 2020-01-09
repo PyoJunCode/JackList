@@ -561,10 +561,11 @@ def update_rakuten_products(nowDate):
 
             for item in Items:
                 exists = session.query(rakuten_Product).filter_by(itemCode=item['Item']['itemCode'])
+                title = (item['Item']['itemName'][:50] + '..') if len(item['Item']['itemName']) > 50 else item['Item']['itemName']
 
                 if(exists.scalar()):
-                    exists.first().itemName = item['Item']['itemName']
-                    exists.first().itemPrice = item['Item']['itemPrice'],
+                    exists.first().itemName = title
+                    exists.first().itemPrice = item['Item']['itemPrice']
                     exists.first().itemCode = item['Item']['itemCode']
                     exists.first().itemUrl = item['Item']['itemUrl']
                     exists.first().reviewCount = item['Item']['reviewCount']
@@ -578,7 +579,7 @@ def update_rakuten_products(nowDate):
                     itemCode = item['Item']['itemCode'],
                     mediumImageUrls = item['Item']['mediumImageUrls'][0]['imageUrl'],
                     itemPrice = item['Item']['itemPrice'],
-                    itemName = item['Item']['itemName'],
+                    itemName = title,
                     itemUrl = item['Item']['itemUrl'],
                     reviewCount = item['Item']['reviewCount'],
                     reviewAverage = item['Item']['reviewAverage'],
@@ -635,10 +636,10 @@ def update_yahoo_products(nowDate):
               if(int(yahoo_itemInfo_url['ResultSet']['totalResultsReturned']) != 0):
                
                 yahoo_itemInfo = yahoo_itemInfo_url['ResultSet']['0']['Result']['0']
-                
+                title = (val['Name'][:50] + '..') if len(val['Name']) > 50 else var['Name']
        
                 if(exists.scalar()):
-                    exists.first().itemName = val['Name']
+                    exists.first().itemName = title
                     exists.first().itemPrice = yahoo_itemInfo['Price']['_value']
                     exists.first().itemCode = val['Code']
                     exists.first().itemUrl = yahoo_itemInfo['Url']
@@ -652,7 +653,7 @@ def update_yahoo_products(nowDate):
                     itemCode = val['Code'],
                     mediumImageUrls = yahoo_itemInfo['Image']['Small'],
                     itemPrice = yahoo_itemInfo['Price']['_value'],
-                    itemName = val['Name'],
+                    itemName = title,
                     itemUrl = yahoo_itemInfo['Url'],
                     reviewCount = val['Review']['Count'],
                     reviewAverage = val['Review']['Rate']
@@ -684,7 +685,7 @@ def update_yahoo_products(nowDate):
 
 ##=================================update amazon products==============================================
 
-def update_amazon_products():
+def update_amazon_products(nowDate):
 
     progress = 0
     rss_url = 'https://am-tb.tk/amaranrss/'
@@ -757,7 +758,7 @@ def update_amazon_products():
               itemName = title,
               ranking = rank,
               genreId = id,
-              date = 202001071150
+              date = nowDate
               )
               )
               rank += 1
@@ -801,6 +802,9 @@ def updateProducts():
     
 def updateCategories():
 
+    update_rakuten_cate()
+    update_yahoo_cate()
+    update_amazon_cate()
 
 #    th_rakuten_cate = threading.Thread(target = update_rakuten_cate)
 #    th_yahoo_cate = threading.Thread(target = update_yahoo_cate)
@@ -812,18 +816,24 @@ def updateCategories():
 #    th_yahoo_cate.join()
     
     print('categories update completed')
+    
+    
+    
+    
 
 #now = datetime.datetime.now()
 #nowDate = now.strftime('%Y%m%d%H%M')
 
-#test()
+##============for testing==================
+
 #update_rakuten_cate()
 #update_rakuten_products(nowDate)
 #update_yahoo_cate()
 #update_yahoo_products(nowDate)
 #update_amazon_cate()
-#update_amazon_products()
+#update_amazon_products(nowDate)
 
+##=========================================
 
 #updateProducts()
 #updateCategories()

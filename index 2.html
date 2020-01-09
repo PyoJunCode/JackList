@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HTML 5  Layout Structure</title>
+<link href="project1.0.css" rel="stylesheet" type="text/css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<link href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.css" rel="stylesheet"  type='text/css'>
+</head>
+
+<body>
+
+<header>
+  <script type="text/javascript" src="script.js"></script>
+<nav>
+<!-- method="get" action="https://esearch.rakuten.co.jp/rms/sd/esearch/vc" onsubmit="sc_searchBox('search','m1');" target="_blank" -->
+<form id ="form">
+  <input id = "input" type="text"  placeholder="키워드로 검색하기" maxlength="100" size="100"></input>
+  <span ><input type="submit" id="submit"></input></span>
+</form>
+</nav>
+</header>
+
+<main>
+  <h1 id="form"> 라쿠텐! </h1>
+<div id ="selector">
+     <span id="r_topselector" name="r_topselector" ></span>
+      <span id="r_secselector" name="r_secselector"></span>
+      <span id="r_thrselector" name="r_thrselector"></span>
+  <div class="cat">
+  <select id="dd"name="r_mainCategory">
+       <option value="">대카테고리</option>
+   </select>
+  <select id="dd" name="r_subCategory">
+       <option value="">중카테고리</option>
+   </select>
+   <select id="dd" name="r_thirdCategory">
+        <option value="">소카테고리</option>
+    </select>
+  </div>
+  <div id="r_myList" onscroll="myFunction()" >
+</div>
+</div>
+</main>
+
+<main>
+      <h1 id="form"> 아마존! </h1>
+      <div id ="selector">
+           <span id="a_topselector" name="a_topselector" ></span>
+            <span id="a_secselector" name="a_secselector"></span>
+            <span id="a_thrselector" name="a_thrselector"></span>
+        <div class="cat">
+        <select id="dd"name="a_mainCategory">
+             <option value="">대카테고리</option>
+         </select>
+        <select id="dd" name="a_subCategory">
+             <option value="">중카테고리</option>
+         </select>
+         <select id="dd" name="a_thirdCategory">
+              <option value="">소카테고리</option>
+          </select>
+        </div>
+        <div id="a_myList" onscroll="myFunction()" >
+      </div>
+      </div>
+</main>
+
+<main>
+  <h1 id="form"> 야후! </h1>
+  <div id ="selector">
+       <span id="y_topselector" name="y_topselector" ></span>
+        <span id="y_secselector" name="y_secselector"></span>
+        <!-- <span id="y_thrselector" name="y_thrselector"></span> -->
+    <div class="cat">
+    <select id="dd"name="y_mainCategory">
+         <option value="">대카테고리</option>
+     </select>
+    <select id="dd" name="y_subCategory">
+         <option value="">중카테고리</option>
+     </select>
+     <!-- <select id="dd" name="y_thirdCategory">
+          <option value="">소카테고리</option>
+      </select> -->
+    </div>
+    <div id="y_myList" onscroll="myFunction()" >
+  </div>
+  </div>
+</main>
+
+<footer> Footer </footer> -->
+
+</body>
+</html>
