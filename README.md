@@ -18,7 +18,7 @@
   
   * pandas
   
-  * wsgi (not sure)
+  * python-mysql
 
  
 ## ENV
@@ -110,13 +110,21 @@
     - duplicate product result when searching fixed
     - product sorted by ranking surely
     - *prototype complete*
-
+    - update logger added
+    
+  * 1/14 
+    - get amazon product : RSS => Crawling
+    - amazon: TOO MANY EXCEPTION => need None exception when len = 0
 
   * Todo
     - ranking tracker (using rank table)
     - Threading
-    - products maybe not sorted by ranking?
+    - gunicorn, supervisor
+    - renewal amazon method
+    - DB structure repair
+    -
+    
 
   * Issue
-    - amazon 食品・飲料・お酒 category can't read in For loop(WHY??)
+    - amazon index error => pass
     
