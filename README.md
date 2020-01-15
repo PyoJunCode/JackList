@@ -114,6 +114,7 @@
     
   * 1/14 
     - get amazon product : RSS => Crawling
+<<<<<<< HEAD
     - amazon: TOO MANY EXCEPTION => pass product when exception occured
     
   * 1/15
@@ -123,11 +124,16 @@
     - table encoding type changed for emoticon in product title
     
     
+=======
+    - amazon: TOO MANY EXCEPTION => need None exception when len = 0
+
+>>>>>>> 8914042ea952725c678c6ba2c374349e31be6ed4
   * Todo
     - ranking tracker (using rank table)
     - Threading
     - gunicorn, supervisor
     - renewal amazon method
+<<<<<<< HEAD
     
 
   * Issue
@@ -137,3 +143,12 @@
     - amazon exception 
     - ALTER DATABASE rakuten CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+=======
+    - DB structure repair
+    -
+    
+
+  * Issue
+    - amazon index error => pass
+    
+>>>>>>> 8914042ea952725c678c6ba2c374349e31be6ed4
