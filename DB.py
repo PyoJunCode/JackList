@@ -31,44 +31,42 @@ Base = declarative_base()
 
 ##==================================================ORM CLASS===============================================
 
-#ORDER : RAKUTEN - YAHOO - AMAZON  ,,,, CATEGORY - PRODUCT - PRODUCT RANKING
+##FUNCTION ORDER : RAKUTEN - YAHOO - AMAZON  ,,,, CATEGORY - PRODUCT - PRODUCT RANKING
+##Comments
 
 class rakuten_Category(Base):
 
     __tablename__ = 'rakuten_category'
     id = Column(Integer, primary_key=True)
-    genreId = Column(Integer)
-    cateName = Column(String(50))
-    parentId = Column(Integer, ForeignKey('rakuten_category.id'))
-    depth = Column(Integer)
+    genreId = Column(Integer) #category ID from API
+    cateName = Column(String(50)) # category Name from API
+    parentId = Column(Integer, ForeignKey('rakuten_category.id')) #parent category ID
+    depth = Column(Integer) # now depth
     children = relationship('rakuten_Category', remote_side=[parentId])
 
 
-    def __init__(self, genreId, cateName, parentId, depth):
+    def __init__(self, genreId, cateName, parentId, depth): #init model
 
         self.genreId = genreId
         self.cateName = cateName
         self.parentId = parentId
         self.depth = depth
 
-    def __repr__(self):
+    def __repr__(self): # create table when table not exists
         return "<rakuten_Category(genreId = '%s', cateName = '%s' parentId = '%s', depth = '%s')>" % (self.genreId, self.cateName, self.parentId, self.depth)
 
-class rakuten_CateSchema(ModelSchema):
-    class Meta:
-        mode = rakuten_Category
 
 class rakuten_Product(Base):
 
     __tablename__ = 'rakuten_product'
     id = Column(Integer, primary_key=True)
-    itemCode = Column(String(50),  unique=True)
-    mediumImageUrls = Column(String(200))
-    itemPrice = Column(String(50))
-    itemName = Column(String(255))
-    itemUrl = Column(String(200))
-    reviewCount = Column(Integer)
-    reviewAverage = Column(String(5))
+    itemCode = Column(String(50),  unique=True) # item code from API
+    mediumImageUrls = Column(String(200)) # item image from API
+    itemPrice = Column(String(50)) # itemPrice from API
+    itemName = Column(String(255)) # item name from API
+    itemUrl = Column(String(200)) # item URL from API
+    reviewCount = Column(Integer) # item reviewCOunt from API
+    reviewAverage = Column(String(5)) # item reviewAverage from API
     itemInfo = relationship('rakuten_Ranking' , back_populates='product')
 
     def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
@@ -93,7 +91,7 @@ class rakuten_Ranking(Base):
     itemCode = Column(String(50), ForeignKey('rakuten_product.itemCode'))
     ranking = Column(Integer)
     genreId = Column(Integer)
-    date = Column(BigInteger)
+    date = Column(BigInteger) # saved time
     product = relationship('rakuten_Product', back_populates='itemInfo', foreign_keys=[itemCode])
 
 
@@ -272,13 +270,13 @@ session_factory = sessionmaker(autocommit = False, autoflush = False,bind = engi
 Session = scoped_session(session_factory)
 session = Session()
 
-#selenium
+#selenium setting
 options = webdriver.ChromeOptions()
-options.add_argument('headless')
+options.add_argument('headless') # for background
 options.add_argument("disable-gpu")
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
-options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
+options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36") # for fake agent
 
 ##========================================================================================
 
@@ -291,19 +289,19 @@ options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6)
 
 rakuten_rankingBaseUrl = 'https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20170628?format=json&genreId='
 
-rakuten_rankingParams = '&page='
+rakuten_rankingParams = '&page=' # for page
 
 
-rakuten_genreBaseUrl = 'https://app.rakuten.co.jp/services/api/IchibaGenre/Search/20140222?format=json&genreId='
+rakuten_genreBaseUrl = 'https://app.rakuten.co.jp/services/api/IchibaGenre/Search/20140222?format=json&genreId=' #category base url
 
-rakuten_genreParmas = '&elements=parent%2Ccurrent%2Cchildren'
+rakuten_genreParmas = '&elements=parent%2Ccurrent%2Cchildren'#for filter api result
 
 
 rakuten_appId = '&applicationId=1036855640468891236'
 
-rakuten_root_cate = requests.get('https://app.rakuten.co.jp/services/api/IchibaGenre/Search/20140222?format=json&genreId=0&elements=parent%2Ccurrent%2Cchildren&applicationId=1036855640468891236').json() # root rakuten_Category
+rakuten_root_cate = requests.get('https://app.rakuten.co.jp/services/api/IchibaGenre/Search/20140222?format=json&genreId=0&elements=parent%2Ccurrent%2Cchildren&applicationId=1036855640468891236').json() # get root rakuten_Category
 
-rakuten_cate = rakuten_root_cate['children']
+rakuten_cate = rakuten_root_cate['children'] # get actual categories list
 
 #========================================== Yahoo api links ========================================
 
@@ -313,9 +311,9 @@ yahoo_itemBaseUrl = 'http://shopping.yahooapis.jp/ShoppingWebService/V1/json/ite
 
 yahoo_genreBaseUrl ='https://shopping.yahooapis.jp/ShoppingWebService/V1/json/categorySearch?appid=dj00aiZpPTh4SUJUQkJvRGV5ZyZzPWNvbnN1bWVyc2VjcmV0Jng9MTU-&category_id='
 
-yahoo_root_cate = requests.get('https://shopping.yahooapis.jp/ShoppingWebService/V1/json/categorySearch?appid=dj00aiZpPTh4SUJUQkJvRGV5ZyZzPWNvbnN1bWVyc2VjcmV0Jng9MTU-&category_id=1').json() # root yahoo_Category
+yahoo_root_cate = requests.get('https://shopping.yahooapis.jp/ShoppingWebService/V1/json/categorySearch?appid=dj00aiZpPTh4SUJUQkJvRGV5ZyZzPWNvbnN1bWVyc2VjcmV0Jng9MTU-&category_id=1').json() # get root yahoo_Category
 
-yahoo_cate = yahoo_root_cate['ResultSet']['0']['Result']['Categories']['Children']
+yahoo_cate = yahoo_root_cate['ResultSet']['0']['Result']['Categories']['Children']  # get actual categories list
 ##============================================================================================
 
 ##=============================Update Category Info===========================================
@@ -324,22 +322,26 @@ yahoo_cate = yahoo_root_cate['ResultSet']['0']['Result']['Categories']['Children
 def update_rakuten_cate():
 
     rakuten_Category.__table__.drop(engine)
-    rakuten_Category.__table__.create(engine)
+    rakuten_Category.__table__.create(engine) # drop table if already eixsts
    
-    for child in rakuten_cate:
+    for child in rakuten_cate:# set target to category depth 1
        
-        #print(child['child']['genreName'] + " id: " + str(child['child']['genreId']) + " depth : 1" +     "\n")
+        #push now category into ORM class
         addCate = rakuten_Category(
         child['child']['genreId'],
         child['child']['genreName'],
         None,
         1
         )
+        #commit to DB
         session.add(
         addCate
         )
         session.commit()
+        
         print('rakuten ' +str(addCate.id) + " " + child['child']['genreName'] + " completed") ## progress debug
+        
+        #set target to children category (depth 2)
         child2Cate = requests.get(rakuten_genreBaseUrl+str(child['child']['genreId'])+ rakuten_genreParmas +rakuten_appId).json()
         for child2 in child2Cate['children']:
             
@@ -413,15 +415,15 @@ def update_yahoo_cate():
         addCate = yahoo_Category(
                int(val['Id']),
                val['Title']['Short'],
-               1,
+               None,
                1
                )
         session.add(
         addCate
         )
         session.commit()
-        depth2Cate = requests.get(yahoo_genreBaseUrl + str(parent_id)).json()
-        depth2Cate_json =depth2Cate['ResultSet']['0']['Result']['Categories']['Children']
+        depth2Cate = requests.get(yahoo_genreBaseUrl + str(parent_id)).json() # get children categories
+        depth2Cate_json =depth2Cate['ResultSet']['0']['Result']['Categories']['Children'] # get list
         for key,val in depth2Cate_json.items():
           if(key[0] != '_'): ## filter
     
@@ -456,10 +458,10 @@ def update_yahoo_cate():
 def update_amazon_cate():
 
     amazon_Category.__table__.drop(engine)
-    amazon_Category.__table__.create(engine)
+    amazon_Category.__table__.create(engine) ## drop if table exists
     
-    count = 0
-    url = 'https://www.amazon.co.jp/gp/bestsellers'
+    count = 0 ## for debug
+    url = 'https://www.amazon.co.jp/gp/bestsellers' #base category url
     
     driver = webdriver.Chrome('/usr/bin/chromedriver', options=options)
     driver.get(url)
@@ -467,13 +469,13 @@ def update_amazon_cate():
     
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     
-    menu = soup.select('#zg_browseRoot > ul > li > a')
-    done = len(menu)
+    menu = soup.select('#zg_browseRoot > ul > li > a') # css selector for menu name
+    process = len(menu)
     
     for item in menu:
         count += 1
-        print(item.text + ' ing...\t' + str(count) + '/' + str(done))
-        url2 = str(item['href'])
+        print(item.text + ' ing...\t' + str(count) + '/' + str(process)) ## process debug
+        url2 = str(item['href']) # category link
         
         addCate = amazon_Category(
         url2,
@@ -486,45 +488,27 @@ def update_amazon_cate():
         )
         session.commit()
         
-##========================for depth 3==============================
+#========================for depth 2==============================
 
-#        driver.get(url2)
-#        soup2 = BeautifulSoup(driver.page_source, 'html.parser')
-#        menu2 = soup2.select('#zg_browseRoot > ul > ul >li > a')
-#
-#        for item2 in menu2:
-#           # print("\t" + item2.text)
-#            url3 = str(item2['href'])
-#
-#            addCate2 = amazon_Category(
-#            url3,
-#            item2.text,
-#            None,
-#            2
-#            )
-#            session.add(
-#            addCate2
-#            )
+        driver.get(url2) #open category link
+        soup2 = BeautifulSoup(driver.page_source, 'html.parser')
+        menu2 = soup2.select('#zg_browseRoot > ul > ul >li > a')
+
+        for item2 in menu2:
+           # print("\t" + item2.text)
+            url3 = str(item2['href'])
+
+            addCate2 = amazon_Category(
+            url3,
+            item2.text,
+            None,
+            2
+            )
+            session.add(
+            addCate2
+            )
             
             
-#            driver.get(url3)
-#            soup3 = BeautifulSoup(driver.page_source, 'html.parser')
-#            menu3 = soup3.select('#zg_browseRoot > ul > ul > ul >li > a')
-#
-#            for item3 in menu3:
-#               # print("\t\t" + item3.text)
-#
-#                url4 = str(item3['href'])
-#
-#                addCate3 = amazon_Category(
-#                url4,
-#                item3.text,
-#                addCate2.id,
-#                3
-#                )
-#                session.add(
-#                addCate3
-#                )
                 
     session.commit()
     driver.quit()
@@ -537,7 +521,7 @@ def update_rakuten_products(nowDate):
 
     logger.info('update_rakuten_products_start')
     progress = 0
-    selectGen = session.query(rakuten_Category.genreId).all()
+    selectGen = session.query(rakuten_Category.genreId).all() # Load category list
 
     genList = [value for (value,) in selectGen]
     genList.append(0) # add root cateogry
@@ -555,12 +539,12 @@ def update_rakuten_products(nowDate):
        
         #for debug
         if('error' in getRanking): # error case
-          if(getRanking['error'] == 'not_found'):
+          if(getRanking['error'] == 'not_found'): # error case : page not found => pass
             print('\terror in: '+str(genre) + ' page_not_found')
             errorList.append(genre)
             logger.info('\terror in: '+str(genre) + ' page_not_found')
             continue
-          else:
+          else: # error case : too many requests => sleep 2 second
             print('Too many requests. Sleep for 2 sec...')
             time.sleep(2)
             getRanking = requests.get(rakuten_rankingBaseUrl+ str(genre) + rakuten_rankingParams +rakuten_appId).json()
@@ -574,7 +558,7 @@ def update_rakuten_products(nowDate):
                 exists = session.query(rakuten_Product).filter_by(itemCode=item['Item']['itemCode'])
                 title = (item['Item']['itemName'][:50] + '..') if len(item['Item']['itemName']) > 50 else item['Item']['itemName']
 
-                if(exists.scalar()):
+                if(exists.scalar()): # if product already exists
                     exists.first().itemName = title
                     exists.first().itemPrice = item['Item']['itemPrice']
                     exists.first().itemCode = item['Item']['itemCode']
@@ -583,7 +567,7 @@ def update_rakuten_products(nowDate):
                     exists.first().mediumImageUrls = item['Item']['mediumImageUrls'][0]['imageUrl']
                     exists.first().reviewAverage = item['Item']['reviewAverage']
                     session.commit()
-                else:
+                else: # if is new product
                     session.add(
                     rakuten_Product(
                     itemCode = item['Item']['itemCode'],
@@ -640,17 +624,17 @@ def update_yahoo_products(nowDate):
         
         getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre) + '&offset=' + str((page * 20))).json()
         yahoo_products = getRanking['ResultSet']['0']['Result']
-        if(int(getRanking['ResultSet']['totalResultsAvailable']) != 0):
+        if(int(getRanking['ResultSet']['totalResultsAvailable']) != 0): # if result exists
           for key,val in yahoo_products.items():
-            if(key[0] != 'R' and key[0] != '_' and key[0] != 'C'):
-              exists = session.query(yahoo_Product).filter_by(itemCode=val['Code'])
+            if(key[0] != 'R' and key[0] != '_' and key[0] != 'C'): # filter unnecessary elements
+              exists = session.query(yahoo_Product).filter_by(itemCode=val['Code']) # check exists
               yahoo_itemInfo_url = requests.get(yahoo_itemBaseUrl + val['Code']).json()
               if(int(yahoo_itemInfo_url['ResultSet']['totalResultsReturned']) != 0):
                
                 yahoo_itemInfo = yahoo_itemInfo_url['ResultSet']['0']['Result']['0']
                 title = (val['Name'][:50] + '..') if len(val['Name']) > 50 else val['Name']
        
-                if(exists.scalar()):
+                if(exists.scalar()): #if exists
                     exists.first().itemName = title
                     exists.first().itemPrice = yahoo_itemInfo['Price']['_value']
                     exists.first().itemCode = val['Code']
@@ -659,7 +643,7 @@ def update_yahoo_products(nowDate):
                     exists.first().mediumImageUrls = yahoo_itemInfo['Image']['Small']
                     exists.first().reviewAverage = val['Review']['Rate']
                     session.commit()
-                else:
+                else: # new
                     session.add(
                     yahoo_Product(
                     itemCode = val['Code'],
@@ -690,8 +674,9 @@ def update_yahoo_products(nowDate):
             session.commit()
    
              
-        else: #debug
-          print(getRanking)
+        else: #if No result (error)
+          print('There are no result for products')
+          
     print('yahoo complete !!!')
     logger.info('yahoo_product_update_complete !!!')
     logger.info('error list: ' + errorItemList)
@@ -789,9 +774,9 @@ def update_amazon_products(nowDate):
 def updateProducts():
 
     now = datetime.datetime.now()
-    nowDate = now.strftime('%Y%m%d%H%M')
+    nowDate = now.strftime('%Y%m%d%H%M')# get now date
    
-    
+    #add now date to rank date list
     session.add(
     RankList(
     date = int(nowDate)
@@ -817,9 +802,10 @@ def updateProducts():
     
 def updateCategories():
 
-    update_rakuten_cate()
-    update_yahoo_cate()
-    update_amazon_cate()
+    #update_rakuten_cate()
+    #update_yahoo_cate()
+    #update_amazon_cate()
+
 
 #    th_rakuten_cate = threading.Thread(target = update_rakuten_cate)
 #    th_yahoo_cate = threading.Thread(target = update_yahoo_cate)
@@ -845,12 +831,12 @@ def updateCategories():
 #update_rakuten_products(nowDate)
 #update_yahoo_cate()
 #update_yahoo_products(nowDate)
-update_amazon_cate()
-update_amazon_products(202001090149)
+#update_amazon_cate()
+#update_amazon_products(nowDate)
 
 ##=========================================
 
-
+## 경고 : 카테고리가 존재해야 상품을 업데이트 할 수 있습니다.
 #updateCategories()
 #updateProducts()
 

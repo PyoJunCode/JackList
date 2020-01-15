@@ -33,9 +33,6 @@ db = SQLAlchemy(app)
 
 engine = create_engine(url)
 
-Session = sessionmaker(bind = engine)
-session = Session()
-
 rakuten_categories = None
 yahoo_categories = None
 amazon_categories = None
@@ -100,6 +97,10 @@ class RankList(db.Model):
 
 #==============================================================================
 
+
+session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
+Session = scoped_session(session_factory)
+session = Session()
 
 #===========================Functions==========================================
 

@@ -18,7 +18,7 @@
   
   * pandas
   
-  * wsgi (not sure)
+  * python-mysql
 
  
 ## ENV
@@ -110,13 +110,30 @@
     - duplicate product result when searching fixed
     - product sorted by ranking surely
     - *prototype complete*
-
-
+    - update logger added
+    
+  * 1/14 
+    - get amazon product : RSS => Crawling
+    - amazon: TOO MANY EXCEPTION => pass product when exception occured
+    
+  * 1/15
+    - DB overall structure: complement relationship ( compare column => ref by id (primary_key) )
+    - overall category added lastly now : to get id = len( ) ==>> not efficient
+    - amazon product structure updated (same as others)
+    - table encoding type changed for emoticon in product title
+    
+    
   * Todo
     - ranking tracker (using rank table)
     - Threading
-    - products maybe not sorted by ranking?
+    - gunicorn, supervisor
+    - renewal amazon method
+    
 
   * Issue
-    - amazon 食品・飲料・お酒 category can't read in For loop(WHY??)
-    
+    - overall category added lastly now : to get id = len( ) ==>> not efficient
+    - merge product and ranking table
+    - itemUrl too long because utf-8 (amazon) 
+    - amazon exception 
+    - ALTER DATABASE rakuten CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
