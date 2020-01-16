@@ -61,7 +61,7 @@ class rakuten_Product(Base):
     itemCode = Column(String(50),  unique=True) # item code from API
     mediumImageUrls = Column(String(200)) # item image from API
     itemPrice = Column(String(50)) # itemPrice from API
-    itemName = Column(String(255)) # item name from API
+    itemName = Column(String(100)) # item name from API
     itemUrl = Column(String(200)) # item URL from API
     reviewCount = Column(String(10)) # item reviewCOunt from API
     reviewAverage = Column(String(5)) # item reviewAverage from API
@@ -133,7 +133,7 @@ class yahoo_Product(Base):
     itemCode = Column(String(100),  unique=True)
     mediumImageUrls = Column(String(200))
     itemPrice = Column(String(50))
-    itemName = Column(String(255))
+    itemName = Column(String(100))
     itemUrl = Column(String(200))
     reviewCount = Column(String(10))
     reviewAverage = Column(String(5))
@@ -206,7 +206,7 @@ class amazon_Product(Base):
     mediumImageUrls = Column(String(200)) # item image from API
     itemPrice = Column(String(50)) # itemPrice from API
     itemName = Column(String(100)) # item name from API
-    itemUrl = Column(String(1000)) # item URL from API
+    itemUrl = Column(String(900)) # item URL from API
     reviewCount = Column(String(10)) # item reviewCOunt from API
     reviewAverage = Column(String(5)) # item reviewAverage from API
  
@@ -276,7 +276,7 @@ session = Session()
 #selenium setting
 options = webdriver.ChromeOptions()
 options.add_argument('headless') # for background
-options.add_argument("disable-gpu")
+options.add_argument('disable-gpu')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36") # for fake agent
@@ -432,7 +432,7 @@ def update_amazon_cate():
         addCate
         )
         session.commit()
-  
+        
         driver.get(url2) #open category link
         soup2 = BeautifulSoup(driver.page_source, 'html.parser')
         menu2 = soup2.select('#zg_browseRoot > ul > ul >li > a')
@@ -450,6 +450,7 @@ def update_amazon_cate():
             session.add(
             addCate2
             )
+            
             
             
                 
@@ -482,7 +483,7 @@ def update_rakuten_products():
     for genre in genList:
       progress += 1
 
-      for page in range(1,4): # 1~4page 120 products
+      for page in range(1,5): # 1~4page 120 products
         
         try:
             print('rakuten: ' + str(genre['cateName']) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
@@ -573,7 +574,7 @@ def update_yahoo_products():
         dict.pop('_sa_instance_state', None) #filter
         genList.append(dict)
    
-    genList.append({'genreId': 1, 'parentId': None , 'cateName': 'ALL','id': len(genList) + 1 , 'depth': 0 }) # add root cateogry
+    genList.append({'genreId': 0, 'parentId': None , 'cateName': 'ALL','id': len(genList) + 1 , 'depth': 0 }) # add root cateogry
      
     errorCateList =[]
     errorItemList = []
@@ -585,17 +586,25 @@ def update_yahoo_products():
       for page in range(0,5): # range * 20 -> offset
         try:
           print('Yahoo: '+str(genre['cateName']) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
-        except KeyError:
-          logger.info('\tfatal error: KeyError in ' + str(progress) + ' category') #error
+
+          getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre['genreId']) + '&offset=' + str((page * 20))).json()
+        except:
+          logger.info('\tfatal error in ' + str(progress) + ' category') #error
+          errorCateList.append(genrep['cateName'])
           continue
-        getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre['genreId']) + '&offset=' + str((page * 20))).json()
+          
         yahoo_products = getRanking['ResultSet']['0']['Result']
         if(int(getRanking['ResultSet']['totalResultsAvailable']) != 0): # if result exists
         
           for key,val in yahoo_products.items(): ## each item
             if(key[0] != 'R' and key[0] != '_' and key[0] != 'C'): # filter unnecessary elements
               exists = session.query(yahoo_Product).filter_by(itemCode=val['Code']) # check exists
-              yahoo_itemInfo_url = requests.get(yahoo_itemBaseUrl + val['Code']).json()
+              try:
+                yahoo_itemInfo_url = requests.get(yahoo_itemBaseUrl + val['Code']).json()
+              except:
+                errorItemList.append(key)
+                continue
+                
               if(int(yahoo_itemInfo_url['ResultSet']['totalResultsReturned']) != 0):
                
                 yahoo_itemInfo = yahoo_itemInfo_url['ResultSet']['0']['Result']['0']
@@ -677,6 +686,7 @@ def update_amazon_products():
     for genre in list:
           progress += 1
           
+          
           if(len(genre) < 1 ): # if not eixsts -> pass
             errorCateList.append(progress)
             continue
@@ -691,19 +701,15 @@ def update_amazon_products():
               
               soup = BeautifulSoup(driver.page_source, 'html.parser')
               print('Amazon: '+str(genre['cateName']) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
-#              try:
-#
-#              except KeyError:
-#                logger.info('\tfatal error: KeyError in ' + str(progress) + ' category') #error
-#                continue
+
               
               menu = soup.select('.a-list-item > div') # css selector for menu name
               for item in  menu :
               #@todo: complement exception logic (now: exception => just pass product)
                 try:
                 
-                  title = item.select('.p13n-sc-truncated')[0].text.strip()
-                  title = (title[:50] + '..') if len(title) > 50 else title # strip if too long
+                  titleTemp = item.select('.p13n-sc-truncated')[0].text.strip()
+                  title = (titleTemp[:50] + '..') if len(titleTemp) > 50 else titleTemp # strip if too long
                   reviewAvg = item.select('span.a-icon-alt')[0].text
                   reviewCnt = item.select('span > div.a-icon-row.a-spacing-none > a.a-size-small')[0].text
                   price = item.select('.p13n-sc-price')[0].text
@@ -748,12 +754,12 @@ def update_amazon_products():
                          )
                   )
                   session.commit()
-                   
+                  
 
                 except  IndexError:
                   errorItemList.append(item)
                   continue
-                
+              
                 
               
     driver.quit()
@@ -832,9 +838,9 @@ def test():
 #update_rakuten_cate()
 #update_rakuten_products()
 #update_yahoo_cate()
-#update_yahoo_products()
+update_yahoo_products()
 #update_amazon_cate()
-update_amazon_products()
+#update_amazon_products()
 
 ##=========================================
 

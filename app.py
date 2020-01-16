@@ -17,13 +17,14 @@ import json
 
 
 
-url ='mysql://root:@localhost:3306/jacklist?charset=utf8'
+url ='mysql://root:@localhost:3306/jacklist?charset=utf8mb4'
 
 
 app = Flask(__name__)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
+    
 
 app.config['SQLALCHEMY_DATABASE_URI'] = url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -31,10 +32,7 @@ CORS(app)
 db = SQLAlchemy(app)
 
 
-engine = create_engine(url)
 
-Session = sessionmaker(bind = engine)
-session = Session()
 
 rakuten_categories = None
 yahoo_categories = None
@@ -57,7 +55,7 @@ class rakuten_CateSchema(ModelSchema):
    
     class Meta(ModelSchema.Meta):
         model = rakuten_Category
-        dump_only = ('id',)
+        #dump_only = ('id',)
 
 class yahoo_Category(db.Model):
 
@@ -73,7 +71,7 @@ class yahoo_Category(db.Model):
 class yahoo_CateSchema(ModelSchema):
     class Meta(ModelSchema.Meta):
         model = yahoo_Category
-        dump_only = ('id',)
+        #dump_only = ('id',)
 
 
 class amazon_Category(db.Model):
@@ -89,7 +87,7 @@ class amazon_Category(db.Model):
 class amazon_CateSchema(ModelSchema):
     class Meta(ModelSchema.Meta):
         model = amazon_Category
-        dump_only = ('id',)
+        #dump_only = ('id',)
 
 class RankList(db.Model):
 
@@ -100,6 +98,10 @@ class RankList(db.Model):
 
 #==============================================================================
 
+engine = create_engine(url, pool_size = 20, pool_recycle= 500)
+session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
+Session = scoped_session(session_factory)
+session = Session()
 
 #===========================Functions==========================================
 
@@ -135,52 +137,58 @@ def get_rankList():
     return json.loads(data.to_json(orient='records'))
     
 
-def get_rakuten_selected_ranking(data = 0):
+def get_rakuten_selected_ranking(data = '0'):
 
    
-    #print(str(session.query(RankList).order_by(desc('date')).first().date))
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date) + ' ORDER BY ranking ASC'
+    
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
     
     
-    selected_genre = data
-    
-    
-    #print('select from ' + str(session.query(RankList).order_by(desc('date')).first().date) )
-    
-    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
-    
-    
-    data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
-    
-    return json.loads(data.to_json(orient='records'))
-    
-
-def get_yahoo_selected_ranking(data = 1):
-
-
-    #print(str(session.query(RankList).order_by(desc('date')).first().date))
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date) + ' ORDER BY ranking ASC'
-    
-    if data == None or '':
-      data = '0'
+    if data == '0':
+      
+      selected_genre = str(len(rakuten_categories) + 1)
     else:
       selected_genre = data
     
     
-    #print('select from ' + str(session.query(RankList).order_by(desc('date')).first().date) )
     
-    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,  r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId = '
+    
+    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
+    
+    
+    data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
     
     print(query + selected_genre + selected_date)
+    
+    return json.loads(data.to_json(orient='records'))
+    
+
+def get_yahoo_selected_ranking(data = '0'):
+
+
+    
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
+    
+    if data == '0':
+      selected_genre = str(len(yahoo_categories) + 1)
+    else:
+      selected_genre = data
+    
+    
+   
+    
+    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,  r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
+    
+    #print(query + selected_genre + selected_date)
     data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
     
     return json.loads(data.to_json(orient='records'))
 
-def get_amazon_selected_ranking(data = 1):
+def get_amazon_selected_ranking(data = 0):
 
    
-    #print(str(session.query(RankList).order_by(desc('date')).first().date))
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date) + ' ORDER BY ranking ASC'
+    
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
     
     if data == None:
       data = 0
@@ -188,9 +196,9 @@ def get_amazon_selected_ranking(data = 1):
       selected_genre = data
     
     
-    query = 'SELECT DISTINCT p.mediumImageUrls,  p.itemUrl, p.itemName,  r.ranking AS  product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName  WHERE r.genreId = '
+    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,  r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
     
-    #print(query)
+   
     data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
     
     return json.loads(data.to_json(orient='records'))
@@ -199,15 +207,15 @@ def get_amazon_selected_ranking(data = 1):
 def get_rakuten_searched(keyword, arr):
    
     list = tuple(arr)
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date) + ' ORDER BY ranking ASC'
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
     key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
     if '0' in list :
-      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId  '
+      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '
       data = encjson.read_sql_query(query + params + selected_date, engine)
     else:
-      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
+      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId IN '
       data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
       
       
@@ -217,15 +225,15 @@ def get_rakuten_searched(keyword, arr):
 def get_yahoo_searched(keyword, arr):
 
     list = tuple(arr)
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date) + ' ORDER BY ranking ASC'
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
     key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
-    if '1' in list :
-      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId  '
+    if '0' in list :
+      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '
       data = encjson.read_sql_query(query + params + selected_date, engine)
     else:
-      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.itemCode = r.itemCode WHERE r.genreId IN '
+      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId IN '
       data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
       
     return json.loads(data.to_json(orient='records'))
@@ -234,16 +242,16 @@ def get_yahoo_searched(keyword, arr):
 def get_amazon_searched(keyword,arr):
     
     list = tuple(arr)
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().date) + ' ORDER BY ranking ASC'
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
     key= str(keyword)
     params = " AND r.itemName LIKE '%%" + key + "%%'"
     
-    if '1' in list :
-      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemUrl, p.itemName, r.ranking AS product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName WHERE r.genreId '
+    if '0' in list :
+      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '
       data = encjson.read_sql_query(query + params + selected_date, engine)
       print(query + params + selected_date)
     else:
-      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemUrl, p.itemName, r.ranking AS product  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.itemName = r.itemName WHERE r.genreId IN '
+      query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId IN '
       data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
       print(query + str(list) + params + selected_date)
     
@@ -256,17 +264,17 @@ def load_data():
     global rakuten_categories
     global yahoo_categories
     global amazon_categories
-    global itemRanking
+   
     yahoo_categories = get_yahoo_cate()
     rakuten_categories = get_rakuten_cate()
     amazon_categories = get_amazon_cate()
-    itemRanking = get_rankList()
+   
     
+    print('\tData load complete !!!')
 
 #====================================================================
 
-#=================================Routing======================================
-
+#=================================Routing===========================
 load_data()
 
 
