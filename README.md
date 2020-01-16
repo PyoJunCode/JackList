@@ -18,7 +18,7 @@
   
   * pandas
   
-  * wsgi (not sure)
+  * python-mysql
 
  
 ## ENV
@@ -27,7 +27,7 @@
  
  * python 3.7.4
  
- * MySQL 5.7.28
+ * MySQL 5.7.28 *(utf8mb4 setting)*
  
  * apache 2.4.41
  
@@ -104,13 +104,41 @@
       - food category not working (can't read in For loop  WHY????????)
     -  flask server issue fixed (Base => db.Model)
     - key word search complete
-
-
+    
+  * 1/9
+    - **Server migration setting complete**
+    - duplicate product result when searching fixed
+    - product sorted by ranking surely
+    - *prototype complete*
+    - update logger added
+    
+  * 1/14 
+    - get amazon product : RSS => Crawling
+    - amazon: TOO MANY EXCEPTION => pass product when exception occured
+    
+  * 1/15
+    - DB overall structure: complement relationship ( compare column => ref by id (primary_key) )
+    - overall category added lastly now : to get id = len( ) ==>> not efficient
+    - amazon product structure updated (same as others)
+    - table encoding type changed for emoticon in product title
+    
+  * 1/16
+    - can update DB while running flask server
+    - server DB recollected
+    
   * Todo
     - ranking tracker (using rank table)
     - Threading
-    - products maybe not sorted by ranking?
+    - gunicorn, supervisor
+    - renewal amazon method
+    
+    
 
   * Issue
-    - amazon 食品・飲料・お酒 category can't read in For loop(WHY??)
-    
+    - overall category added lastly now : to get id = len( ) ==>> not efficient
+    - merge product and ranking table
+    - itemUrl too long because utf-8 (amazon) 
+    - amazon exception 
+    - ALTER DATABASE rakuten CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+    - Can't specify 'ALL' category's index => len() - 1 from server-side
+    -  Yahoo product update take too long time
