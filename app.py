@@ -105,7 +105,7 @@ session = Session()
 
 #===========================Functions==========================================
 
-def get_rakuten_cate():
+def get_rakuten_cate(): ## load rakuten category
     
     data = rakuten_Category.query.all()
     category_schema = rakuten_CateSchema(many=True)
@@ -113,7 +113,7 @@ def get_rakuten_cate():
     
     return output
 
-def get_yahoo_cate():
+def get_yahoo_cate(): ## load yahoo category
 
     data = yahoo_Category.query.all()
     category_schema = yahoo_CateSchema(many=True)
@@ -121,7 +121,7 @@ def get_yahoo_cate():
     
     return output
 
-def get_amazon_cate():
+def get_amazon_cate():## load amazon category
 
     data = amazon_Category.query.all()
     category_schema = amazon_CateSchema(many=True)
@@ -129,23 +129,28 @@ def get_amazon_cate():
     
     return output
 
-
-def get_rankList():
-
-    data =  encjson.read_sql_query('SELECT * FROM ranklist', engine)
-    
-    return json.loads(data.to_json(orient='records'))
     
 
-def get_rakuten_selected_ranking(data = '0'):
-
-   
-    
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
+def get_rakuten_selected_ranking(data = '0', sort = '0'):
     
     
-    if data == '0':
-      
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC'
+    
+    selected_date = ' AND r.date = ' +  str(session.query(RankList).order_by(desc('date')).first().id)
+    
+    ##select latest date from query
+    
+    
+    if data == '0': # set category to 'ALL'
       selected_genre = str(len(rakuten_categories) + 1)
     else:
       selected_genre = data
@@ -156,20 +161,33 @@ def get_rakuten_selected_ranking(data = '0'):
     query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
     
     
-    data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
-    
-    print(query + selected_genre + selected_date)
+    data = encjson.read_sql_query(query + selected_genre + selected_date + order, engine)
+  
     
     return json.loads(data.to_json(orient='records'))
     
 
-def get_yahoo_selected_ranking(data = '0'):
-
+def get_yahoo_selected_ranking(data = '0', sort = '0'):
 
     
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC'
+
+        
     
-    if data == '0':
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+     ##select latest date from query
+     
+     
+    if data == '0': # set category to 'ALL'
       selected_genre = str(len(yahoo_categories) + 1)
     else:
       selected_genre = data
@@ -180,17 +198,30 @@ def get_yahoo_selected_ranking(data = '0'):
     query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,  r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
     
     #print(query + selected_genre + selected_date)
-    data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
+    data = encjson.read_sql_query(query + selected_genre + selected_date + order, engine)
     
     return json.loads(data.to_json(orient='records'))
 
-def get_amazon_selected_ranking(data = 0):
+def get_amazon_selected_ranking(data = '0', sort = '0'):
 
-   
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC'
+
     
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
-    
-    if data == None:
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+     ##select latest date from query
+     
+     
+     
+    if data == None: # amazon DON"T HAVE ALL
       data = 0
     else:
       selected_genre = data
@@ -199,61 +230,103 @@ def get_amazon_selected_ranking(data = 0):
     query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product,  r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
     
    
-    data = encjson.read_sql_query(query + selected_genre + selected_date, engine)
+    data = encjson.read_sql_query(query + selected_genre + selected_date + order, engine)
     
     return json.loads(data.to_json(orient='records'))
 
 
-def get_rakuten_searched(keyword, arr):
+def get_rakuten_searched(keyword, arr, sort = '0'):
    
-    list = tuple(arr)
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC'
+
+    
+    list = tuple(arr) ## contain Cateogry for search
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+    
+    
     key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
-    if '0' in list :
+    if '0' in list :  # if search in ALL category
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '
-      data = encjson.read_sql_query(query + params + selected_date, engine)
+      data = encjson.read_sql_query(query + params + selected_date + order, engine)
     else:
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId IN '
-      data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
+      data = encjson.read_sql_query(query + str(list) + params + selected_date + order, engine)
       
       
     return json.loads(data.to_json(orient='records'))
     
 
-def get_yahoo_searched(keyword, arr):
+def get_yahoo_searched(keyword, arr, sort = '0'):
 
-    list = tuple(arr)
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC'
+
+        
+    list = tuple(arr)  ## contain Cateogry for search
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+    
     key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
-    if '0' in list :
+    if '0' in list :  # if search in ALL category
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '
-      data = encjson.read_sql_query(query + params + selected_date, engine)
+      data = encjson.read_sql_query(query + params + selected_date + order, engine)
     else:
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM yahoo_product AS p INNER JOIN yahoo_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId IN '
-      data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
+      data = encjson.read_sql_query(query + str(list) + params + selected_date + order , engine)
       
     return json.loads(data.to_json(orient='records'))
 
 
-def get_amazon_searched(keyword,arr):
+def get_amazon_searched(keyword,arr, sort = '0'):
     
-    list = tuple(arr)
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id) + ' ORDER BY ranking ASC'
+    
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC'
+
+        
+    list = tuple(arr)  ## contain Cateogry for search
+    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+    
+    
     key= str(keyword)
     params = " AND r.itemName LIKE '%%" + key + "%%'"
     
-    if '0' in list :
+    if '0' in list : # if search in ALL category
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '
-      data = encjson.read_sql_query(query + params + selected_date, engine)
-      print(query + params + selected_date)
+      data = encjson.read_sql_query(query + params + selected_date + order, engine)
+      
     else:
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId IN '
-      data = encjson.read_sql_query(query + str(list) + params + selected_date, engine)
-      print(query + str(list) + params + selected_date)
+      data = encjson.read_sql_query(query + str(list) + params + selected_date + order, engine)
+     
     
     return json.loads(data.to_json(orient='records'))
  
@@ -282,11 +355,7 @@ load_data()
 def index():
     return "<html><body><h1>working!</h1></body></html>"
 
-@app.route('/ranking', methods=['GET',])
-def ranking():
-    
-    return jsonify(get_rankList())
-    
+
     
 @app.route('/rakuten_cate', methods=['GET',])
 def rakuten_cate():
@@ -307,53 +376,56 @@ def amazon_cate():
     
     return jsonify(amazon_categories)
 
+##@params : sort = num for sorting option, data = category id for search
+
 @app.route('/rakuten_selected_ranking', methods=['GET',])
 def rakuten_selected_ranking():
+    sort = request.args.get('sortnum')
     data = request.args.get('genreId')
     if request.args.get('genreId') == '':
       data = '0'
    
-    return jsonify(get_rakuten_selected_ranking(data))
+    return jsonify(get_rakuten_selected_ranking(data, sort))
 
 @app.route('/yahoo_selected_ranking', methods=['GET',])
 def yahoo_selected_ranking():
-
+    sort = request.args.get('sortnum')
     data = request.args.get('genreId')
     if request.args.get('genreId') == '':
       data = '0'
-    return jsonify(get_yahoo_selected_ranking(data))
+    return jsonify(get_yahoo_selected_ranking(data, sort))
 
 @app.route('/amazon_selected_ranking', methods=['GET',])
 def amazon_selected_ranking():
-
+    sort = request.args.get('sortnum')
     data = request.args.get('genreId')
     if request.args.get('genreId') == '':
       data = '0'
-    return jsonify(get_amazon_selected_ranking(data))
+    return jsonify(get_amazon_selected_ranking(data, sort))
     
 @app.route('/rakuten_searched', methods=['GET', 'POST',])
 def rakuten_searched():
-
+    sort = request.args.get('sortnum')
     keyword = str(request.args.get('keyword'))
     arr = request.json
     
-    return jsonify(get_rakuten_searched(keyword, arr))
+    return jsonify(get_rakuten_searched(keyword, arr, sort))
     
 
 @app.route('/yahoo_searched', methods=['GET', 'POST',])
 def yahoo_searched():
-
+    sort = request.args.get('sortnum')
     keyword = str(request.args.get('keyword'))
     arr = request.json
   
-    return jsonify(get_yahoo_searched(keyword,arr))
+    return jsonify(get_yahoo_searched(keyword,arr, sort))
     
 
 @app.route('/amazon_searched', methods=['GET', 'POST',])
 def amazon_searched():
-    
+    sort = request.args.get('sortnum')
     keyword = str(request.args.get('keyword'))
     arr = request.json
     
       
-    return jsonify(get_amazon_searched(keyword, arr))
+    return jsonify(get_amazon_searched(keyword, arr, sort))

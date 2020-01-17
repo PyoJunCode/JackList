@@ -60,11 +60,11 @@ class rakuten_Product(Base):
     id = Column(Integer, primary_key=True)
     itemCode = Column(String(50),  unique=True) # item code from API
     mediumImageUrls = Column(String(200)) # item image from API
-    itemPrice = Column(String(50)) # itemPrice from API
+    itemPrice = Column(Integer) # itemPrice from API
     itemName = Column(String(100)) # item name from API
     itemUrl = Column(String(200)) # item URL from API
-    reviewCount = Column(String(10)) # item reviewCOunt from API
-    reviewAverage = Column(String(5)) # item reviewAverage from API
+    reviewCount = Column(Integer) # item reviewCOunt from API
+    reviewAverage = Column(Integer) # item reviewAverage from API
     #itemInfo = relationship('rakuten_Ranking' , back_populates='product')
 
     def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
@@ -132,11 +132,11 @@ class yahoo_Product(Base):
     id = Column(Integer, primary_key=True)
     itemCode = Column(String(100),  unique=True)
     mediumImageUrls = Column(String(200))
-    itemPrice = Column(String(50))
+    itemPrice = Column(Integer)
     itemName = Column(String(100))
     itemUrl = Column(String(200))
-    reviewCount = Column(String(10))
-    reviewAverage = Column(String(5))
+    reviewCount = Column(Integer)
+    reviewAverage = Column(Integer)
     
     #itemInfo = relationship('yahoo_Ranking' , back_populates='product')
 
@@ -204,11 +204,11 @@ class amazon_Product(Base):
     id = Column(Integer, primary_key=True)
     itemCode = Column(String(100),  unique=True) # item code from API
     mediumImageUrls = Column(String(200)) # item image from API
-    itemPrice = Column(String(50)) # itemPrice from API
+    itemPrice = Column(Integer) # itemPrice from API
     itemName = Column(String(100)) # item name from API
     itemUrl = Column(String(900)) # item URL from API
-    reviewCount = Column(String(10)) # item reviewCOunt from API
-    reviewAverage = Column(String(5)) # item reviewAverage from API
+    reviewCount = Column(Integer) # item reviewCOunt from API
+    reviewAverage = Column(Integer) # item reviewAverage from API
  
     def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
  
@@ -275,11 +275,12 @@ session = Session()
 
 #selenium setting
 options = webdriver.ChromeOptions()
-options.add_argument('headless') # for background
-options.add_argument('disable-gpu')
+options.add_argument('--headless') # for background
+#options.add_argument('--window-size=1280,1024')
 options.add_argument('--no-sandbox')
-options.add_argument('--disable-dev-shm-usage')
-options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36") # for fake agent
+#options.add_argument('--disable-dev-shm-usage')
+options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36') # for fake agent
+headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
 
 ##========================================================================================
 
@@ -580,85 +581,87 @@ def update_yahoo_products():
     errorItemList = []
     done = len(genList)
     
+    
     for genre in genList:
       progress += 1
-
-      for page in range(0,5): # range * 20 -> offset
-        try:
-          print('Yahoo: '+str(genre['cateName']) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
-
-          getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre['genreId']) + '&offset=' + str((page * 20))).json()
-        except:
-          logger.info('\tfatal error in ' + str(progress) + ' category') #error
-          errorCateList.append(genrep['cateName'])
-          continue
-          
-        yahoo_products = getRanking['ResultSet']['0']['Result']
-        if(int(getRanking['ResultSet']['totalResultsAvailable']) != 0): # if result exists
+  
+      
+      try:
+        print('Yahoo: '+str(genre['cateName']) + ' ing...\t'+ str(progress) + '/' + str(done))
+        getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre['genreId']) + '&offset=0' ).json()
+      except:
+        logger.info('\tfatal error in ' + str(progress) + ' category') #error
+        errorCateList.append(genre)
+        continue
         
-          for key,val in yahoo_products.items(): ## each item
-            if(key[0] != 'R' and key[0] != '_' and key[0] != 'C'): # filter unnecessary elements
-              exists = session.query(yahoo_Product).filter_by(itemCode=val['Code']) # check exists
-              try:
-                yahoo_itemInfo_url = requests.get(yahoo_itemBaseUrl + val['Code']).json()
-              except:
-                errorItemList.append(key)
-                continue
-                
-              if(int(yahoo_itemInfo_url['ResultSet']['totalResultsReturned']) != 0):
-               
-                yahoo_itemInfo = yahoo_itemInfo_url['ResultSet']['0']['Result']['0']
-                title = (val['Name'][:50] + '..') if len(val['Name']) > 50 else val['Name'] ## truncate name
-       
-                if(exists.scalar()): #if already exists
-                    exists.first().itemName = title
-                    exists.first().itemPrice = yahoo_itemInfo['Price']['_value']
-                    exists.first().itemCode = val['Code']
-                    exists.first().itemUrl = yahoo_itemInfo['Url']
-                    exists.first().reviewCount = val['Review']['Count']
-                    exists.first().mediumImageUrls = yahoo_itemInfo['Image']['Small']
-                    exists.first().reviewAverage = val['Review']['Rate']
-                    productId = exists.first().id # set id
-                    session.commit()
-                else: # new
-                    addProduct = yahoo_Product(
-                    itemCode = val['Code'],
-                    mediumImageUrls = yahoo_itemInfo['Image']['Small'],
-                    itemPrice = yahoo_itemInfo['Price']['_value'],
-                    itemName = title,
-                    itemUrl = yahoo_itemInfo['Url'],
-                    reviewCount = val['Review']['Count'],
-                    reviewAverage = val['Review']['Rate']
-                    )
-                    
-                    session.add(
-                    addProduct
-                    )
-                    session.commit()
-                    productId = addProduct.id # set id
-                #insert Into ranking
-                session.commit()
-                session.add(
-                yahoo_Ranking(
-                       itemCode = productId,
-                       ranking = val['_attributes']['rank'],
-                       genreId = genre['id'],
-                       date = nowDate
-                       )
-                )
-              else: #debug
-                print(yahoo_itemInfo_url)
-                logger.info('item_not_found ' + str(yahoo_itemInfo_url))
-                errorItemList.append(val['Code'])
-            session.commit()
-   
+      yahoo_products = getRanking['ResultSet']['0']['Result']
+      if(int(getRanking['ResultSet']['totalResultsAvailable']) != 0): # if resulexists
+        
+        for key,val in yahoo_products.items(): ## each item
+          if(key[0] != 'R' and key[0] != '_' and key[0] != 'C'): # filteunnecessary elements
+           
+            y_item_code = val['Code']
+           
+            exists = session.query(yahoo_Product).filter_by(itemCode= y_item_code)# check exists
+            
+           
+            yahoo_itemInfo_url = requests.get(yahoo_itemBaseUrl +  y_item_code).json()
+            
+              
+            if(int(yahoo_itemInfo_url['ResultSet']['totalResultsReturned']) != 0):
              
-        else: #if No result (error)
+              yahoo_itemInfo = yahoo_itemInfo_url['ResultSet']['0']['Result']['0']
+              title = (val['Name'][:50] + '..') if len(val['Name']) > 50 else val['Name'] ## truncate name
+     
+              if(exists.scalar()): #if already exists
+                  exists.first().itemName = title
+                  exists.first().itemPrice = yahoo_itemInfo['Price']['_value']
+                  exists.first().itemCode = y_item_code
+                  exists.first().itemUrl = yahoo_itemInfo['Url']
+                  exists.first().reviewCount = val['Review']['Count']
+                  exists.first().mediumImageUrls = yahoo_itemInfo['Image']['Small']
+                  exists.first().reviewAverage = val['Review']['Rate']
+                  productId = exists.first().id # set id
+                  session.commit()
+              else: # new
+                  addProduct = yahoo_Product(
+                  itemCode = y_item_code,
+                  mediumImageUrls = yahoo_itemInfo['Image']['Small'],
+                  itemPrice = yahoo_itemInfo['Price']['_value'],
+                  itemName = title,
+                  itemUrl = yahoo_itemInfo['Url'],
+                  reviewCount = val['Review']['Count'],
+                  reviewAverage = val['Review']['Rate']
+                  )
+                  
+                  session.add(
+                  addProduct
+                  )
+                  session.commit()
+                  productId = addProduct.id # set id
+              #insert Into ranking
+              session.commit()
+              session.add(
+              yahoo_Ranking(
+                     itemCode = productId,
+                     ranking = val['_attributes']['rank'],
+                     genreId = genre['id'],
+                     date = nowDate
+                     )
+              )
+            else: #debug
+              print(yahoo_itemInfo_url)
+              logger.info('item_not_found ' + str(yahoo_itemInfo_url))
+              errorItemList.append(y_item_code)
+          session.commit()
+ 
+           
+      else: #if No result (error)
           print('There are no result for products')
           
     
     logger.info('yahoo_product_update_complete !!!')
-    logger.info('error Item list: ' + str(errorItemList))
+    logger.info('error cate list: ' + str(errorCateList))
 
 ##===============================================================================================
 
@@ -668,7 +671,7 @@ def update_amazon_products():
 
     progress = 0
     logger.info('update_amazon_products_start')
-    driver = webdriver.Chrome('/usr/bin/chromedriver', options=options)
+  
     pageParam = '/?ie=UTF8&pg=' ## parameter for page
     
     nowDate = session.query(RankList).order_by(desc('date')).first().id # saved date
@@ -677,15 +680,15 @@ def update_amazon_products():
     errorItemList = []
     
     list = []
-    for cate in session.query(amazon_Category).all():
+    for cate in session.query(amazon_Category).all(): #query to dict
         dict = cate.__dict__
-        dict.pop('_sa_instance_state', None)
+        dict.pop('_sa_instance_state', None) #filtering
         list.append(dict)
 
     done = len(list)
     for genre in list:
           progress += 1
-          
+         
           
           if(len(genre) < 1 ): # if not eixsts -> pass
             errorCateList.append(progress)
@@ -697,25 +700,32 @@ def update_amazon_products():
               
               target = input_url + pageParam + str(page) # make address
              
-              driver.get(target)
-              
-              soup = BeautifulSoup(driver.page_source, 'html.parser')
+              print('\t\tconnect complete')
+              resp = requests.get(target)
+              soup = BeautifulSoup(resp.content, 'html.parser')
+             
               print('Amazon: '+str(genre['cateName']) + ' page '+ str(page)+ ' ing...\t' + str(progress) + '/' + str(done))
 
               
               menu = soup.select('.a-list-item > div') # css selector for menu name
+             
               for item in  menu :
               #@todo: complement exception logic (now: exception => just pass product)
                 try:
-                
-                  titleTemp = item.select('.p13n-sc-truncated')[0].text.strip()
+                  p = re.compile('[0-9]+')
+                  titleTemp = item.select('span > a > div')[0].text.strip() if len(item.select('span > a > div')[0].text.strip()) > 0 else 'None'
+                 
                   title = (titleTemp[:50] + '..') if len(titleTemp) > 50 else titleTemp # strip if too long
-                  reviewAvg = item.select('span.a-icon-alt')[0].text
-                  reviewCnt = item.select('span > div.a-icon-row.a-spacing-none > a.a-size-small')[0].text
-                  price = item.select('.p13n-sc-price')[0].text
+                  
+                  reviewAvg = item.select('span.a-icon-alt')[0].text if p.match(item.select('span.a-icon-alt')[0].text) != None else ('0')
+                  reviewCnt = item.select('a.a-size-small')[0].text if p.match(item.select('a.a-size-small')[0].text) != None else ('0')
+               
+                  price =  item.select('span.p13n-sc-price')[0].text if p.match( item.select('span.p13n-sc-price')[0].text) != None else ('0')
+                  
+               
                   link = item.select('a.a-link-normal')[0]['href']
                   img = item.select('span > a > span > div > img')[0]['src']
-                  
+                  print(title)
                   exists = session.query(amazon_Product).filter_by(itemCode = title) # check exists
                   
                   if(exists.scalar()): #if exists
@@ -754,18 +764,18 @@ def update_amazon_products():
                          )
                   )
                   session.commit()
-                  
+                  print('insert complete')
 
                 except  IndexError:
+                  print('error')
                   errorItemList.append(item)
                   continue
-              
+         
                 
-              
-    driver.quit()
+
     logger.info('amazon product update Complete!!')
     logger.info('Error category list: ' + str(errorCateList))
-    logger.info('Error item list: ' + str(errorItemList))
+    logger.info(len(errorItemList), ' Error item passed')
 
 ##=====================================================================================================
 
@@ -788,14 +798,7 @@ def updateProducts():
     update_yahoo_products()
     update_amazon_products()
     
-#    th_rakuten_product = threading.Thread(target = update_rakuten_products, args=(nowDate,))
-#    th_yahoo_product = threading.Thread(target = update_yahoo_products, args=(nowDate,))
-#
-#    th_rakuten_product.start()
-#    th_yahoo_product.start()
-#
-#    th_rakuten_product.join()
-#    th_yahoo_product.join()
+
     
     print('products update completed... ' + nowDate + ' data created')
     
@@ -806,16 +809,6 @@ def updateCategories():
     update_yahoo_cate()
     update_amazon_cate()
 
-
-#    th_rakuten_cate = threading.Thread(target = update_rakuten_cate)
-#    th_yahoo_cate = threading.Thread(target = update_yahoo_cate)
-#
-#    th_rakuten_cate.start()
-#    th_yahoo_cate.start()
-#
-#    th_rakuten_cate.join()
-#    th_yahoo_cate.join()
-    
     print('categories update completed')
     
 
@@ -830,15 +823,13 @@ def test():
      list.append({'genreId': 0, 'parentId': None , 'cateName': 'ALL','id': len(list) + 1 , 'depth': 0 })
      print(list)
 
-#now = datetime.datetime.now()
-#nowDate = now.strftime('%Y%m%d%H%M')
 
 ##============for testing==================
 
 #update_rakuten_cate()
-#update_rakuten_products()
+update_rakuten_products()
 #update_yahoo_cate()
-update_yahoo_products()
+#update_yahoo_products()
 #update_amazon_cate()
 #update_amazon_products()
 
@@ -850,7 +841,6 @@ update_yahoo_products()
 
 #test()
 
-#driver.quit()
 session.commit()
 session.close()
 

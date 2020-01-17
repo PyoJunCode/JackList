@@ -19,6 +19,23 @@
   * pandas
   
   * python-mysql
+  
+  * gunicorn3
+    - gunicorn3 --bind 0.0.0.0:5000 app:app >> execute gunicorn
+  
+    - sudo supervisorctl restart flask_settings >> reload code
+  
+    - =supervisor load=
+  
+    -  sudo pkill gunicorn
+  
+    - sudo supervisorctl reread
+  
+    - sudo supervisorctl update
+  
+    - sudo supervisorctl start flask_settings
+    
+    - sudo supervisorctl stop
 
  
 ## ENV
@@ -34,10 +51,12 @@
  * javascript
 
 
+
+
 ## Database
 
  * https://www.erdcloud.com/d/aBCvizucRmM7xC7cw
- 
+=== 
 ## Log
 
  * ~12/24
@@ -126,19 +145,29 @@
     - can update DB while running flask server
     - server DB recollected
     
+    
+  * 1/17
+    - Yahoo page5 -> 0 changed (don't need 5 page)
+    - Amazon product: Selenium => requests
+    - sorting support
+    - gunicorn setting
+    - DB fix => string to int (review count, price etc...)
+    
   * Todo
     - ranking tracker (using rank table)
     - Threading
-    - gunicorn, supervisor
+    - gunicorn, supervisor setting completed
     - renewal amazon method
     
-    
+===    
 
   * Issue
     - overall category added lastly now : to get id = len( ) ==>> not efficient
     - merge product and ranking table
     - itemUrl too long because utf-8 (amazon) 
-    - amazon exception 
+    - amazon exception (no price, avg etc... => just pass now)
     - ALTER DATABASE rakuten CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
     - Can't specify 'ALL' category's index => len() - 1 from server-side
     -  Yahoo product update take too long time
+    - when updating products, latest date changed => no
+    - **crawling getting slower in some condition**
