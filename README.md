@@ -1,6 +1,7 @@
 # JackList Internship Web Development
 ### Build ALL-IN-ONE online shopping site by using API
   Overall Structure : check PDF
+---
 
 ## python dependency
 
@@ -56,7 +57,8 @@
 ## Database
 
  * https://www.erdcloud.com/d/aBCvizucRmM7xC7cw
-=== 
+ 
+---
 ## Log
 
  * ~12/24
@@ -148,18 +150,17 @@
     
   * 1/17
     - Yahoo page5 -> 0 changed (don't need 5 page)
-    - Amazon product: Selenium => requests
+    - Amazon product crawling :  Selenium => requests
     - sorting support
-    - gunicorn setting
+    - gunicorn, supervisor setting completed
     - DB fix => string to int (review count, price etc...)
     
   * Todo
     - ranking tracker (using rank table)
     - Threading
-    - gunicorn, supervisor setting completed
-    - renewal amazon method
+    - 
     
-===    
+---    
 
   * Issue
     - overall category added lastly now : to get id = len( ) ==>> not efficient
