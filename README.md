@@ -155,20 +155,23 @@
     - gunicorn, supervisor setting completed
     - DB fix => string to int (review count, price etc...)
     
+  * 1/20
+    - 'lock' column added for get valid DB during update
+    - flask code beautify 
+    - amazon DB fixed
+    
+    
+    
   * Todo
     - ranking tracker (using rank table)
     - Threading
-    - 
+    
     
 ---    
 
   * Issue
-    - overall category added lastly now : to get id = len( ) ==>> not efficient
     - merge product and ranking table
-    - itemUrl too long because utf-8 (amazon) 
+    - can't merge tables because amazon's itemUrl too long 
     - amazon exception (no price, avg etc... => just pass now)
-    - ALTER DATABASE rakuten CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-    - Can't specify 'ALL' category's index => len() - 1 from server-side
-    -  Yahoo product update take too long time
-    - when updating products, latest date changed => no
-    - **crawling getting slower in some condition**
+    - **crawling getting slower => server die**
+    - amazon price selector problem

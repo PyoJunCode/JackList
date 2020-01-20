@@ -38,7 +38,6 @@ rakuten_categories = None
 yahoo_categories = None
 amazon_categories = None
 itemRanking = None
-selected_date = None
 
 #===========================Database Model===================================
 class rakuten_Category(db.Model):
@@ -94,6 +93,7 @@ class RankList(db.Model):
     __tablename__ = 'ranklist'
     id = Column(db.Integer, primary_key=True)
     date = Column(db.BigInteger)
+    lock = Column(db.Integer)
 
 
 #==============================================================================
@@ -104,6 +104,31 @@ Session = scoped_session(session_factory)
 session = Session()
 
 #===========================Functions==========================================
+
+def get_date(): # get latest date
+    
+  try:
+    session.commit()# update query date
+    selected_date = ' AND r.date = ' +  str(session.query(RankList).filter_by(lock = 0).order_by(desc('date')).first().id)
+  except: # if all date locked
+    return ' '
+  print(selected_date)
+  return selected_date
+    
+def get_order(sort): # determine sorting method
+
+    if(sort == '1'):
+        order = ' ORDER BY itemPrice ASC'
+    elif(sort == '2'):
+        order = ' ORDER BY itemPrice DESC'
+    elif(sort == '3'):
+        order = ' ORDER BY reviewCount DESC'
+    elif(sort == '4'):
+        order = ' ORDER BY reviewAverage DESC'
+    else:
+        order = ' ORDER BY ranking ASC' ## default
+        
+    return order
 
 def get_rakuten_cate(): ## load rakuten category
     
@@ -134,23 +159,14 @@ def get_amazon_cate():## load amazon category
 def get_rakuten_selected_ranking(data = '0', sort = '0'):
     
     
-    if(sort == '1'):
-        order = ' ORDER BY itemPrice ASC'
-    elif(sort == '2'):
-        order = ' ORDER BY itemPrice DESC'
-    elif(sort == '3'):
-        order = ' ORDER BY reviewCount DESC'
-    elif(sort == '4'):
-        order = ' ORDER BY reviewAverage DESC'
-    else:
-        order = ' ORDER BY ranking ASC'
+    order = get_order(sort)
     
-    selected_date = ' AND r.date = ' +  str(session.query(RankList).order_by(desc('date')).first().id)
+    selected_date = get_date()
     
     ##select latest date from query
     
     
-    if data == '0': # set category to 'ALL'
+    if data == '0': # 0 means all. set category to 'ALL'
       selected_genre = str(len(rakuten_categories) + 1)
     else:
       selected_genre = data
@@ -158,7 +174,7 @@ def get_rakuten_selected_ranking(data = '0', sort = '0'):
     
     
     
-    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = '
+    query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM rakuten_product AS p INNER JOIN rakuten_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId = ' # join query
     
     
     data = encjson.read_sql_query(query + selected_genre + selected_date + order, engine)
@@ -170,20 +186,9 @@ def get_rakuten_selected_ranking(data = '0', sort = '0'):
 def get_yahoo_selected_ranking(data = '0', sort = '0'):
 
     
-    if(sort == '1'):
-        order = ' ORDER BY itemPrice ASC'
-    elif(sort == '2'):
-        order = ' ORDER BY itemPrice DESC'
-    elif(sort == '3'):
-        order = ' ORDER BY reviewCount DESC'
-    elif(sort == '4'):
-        order = ' ORDER BY reviewAverage DESC'
-    else:
-        order = ' ORDER BY ranking ASC'
-
-        
+    order = get_order(sort)
     
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+    selected_date = get_date()
      ##select latest date from query
      
      
@@ -204,19 +209,9 @@ def get_yahoo_selected_ranking(data = '0', sort = '0'):
 
 def get_amazon_selected_ranking(data = '0', sort = '0'):
 
-    if(sort == '1'):
-        order = ' ORDER BY itemPrice ASC'
-    elif(sort == '2'):
-        order = ' ORDER BY itemPrice DESC'
-    elif(sort == '3'):
-        order = ' ORDER BY reviewCount DESC'
-    elif(sort == '4'):
-        order = ' ORDER BY reviewAverage DESC'
-    else:
-        order = ' ORDER BY ranking ASC'
-
+    order = get_order(sort)
     
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+    selected_date = get_date()
      ##select latest date from query
      
      
@@ -237,22 +232,13 @@ def get_amazon_selected_ranking(data = '0', sort = '0'):
 
 def get_rakuten_searched(keyword, arr, sort = '0'):
    
-    if(sort == '1'):
-        order = ' ORDER BY itemPrice ASC'
-    elif(sort == '2'):
-        order = ' ORDER BY itemPrice DESC'
-    elif(sort == '3'):
-        order = ' ORDER BY reviewCount DESC'
-    elif(sort == '4'):
-        order = ' ORDER BY reviewAverage DESC'
-    else:
-        order = ' ORDER BY ranking ASC'
+    order = get_order(sort)
+    
+    selected_date = get_date()
 
     
     list = tuple(arr) ## contain Cateogry for search
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
-    
-    
+
     key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
@@ -269,21 +255,13 @@ def get_rakuten_searched(keyword, arr, sort = '0'):
 
 def get_yahoo_searched(keyword, arr, sort = '0'):
 
-    if(sort == '1'):
-        order = ' ORDER BY itemPrice ASC'
-    elif(sort == '2'):
-        order = ' ORDER BY itemPrice DESC'
-    elif(sort == '3'):
-        order = ' ORDER BY reviewCount DESC'
-    elif(sort == '4'):
-        order = ' ORDER BY reviewAverage DESC'
-    else:
-        order = ' ORDER BY ranking ASC'
+    order = get_order(sort)
+    
+    selected_date = get_date()
 
         
     list = tuple(arr)  ## contain Cateogry for search
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
-    
+
     key= str(keyword)
     params = " AND itemName LIKE '%%" + key + "%%'"
     
@@ -300,24 +278,17 @@ def get_yahoo_searched(keyword, arr, sort = '0'):
 def get_amazon_searched(keyword,arr, sort = '0'):
     
     
-    if(sort == '1'):
-        order = ' ORDER BY itemPrice ASC'
-    elif(sort == '2'):
-        order = ' ORDER BY itemPrice DESC'
-    elif(sort == '3'):
-        order = ' ORDER BY reviewCount DESC'
-    elif(sort == '4'):
-        order = ' ORDER BY reviewAverage DESC'
-    else:
-        order = ' ORDER BY ranking ASC'
+    order = get_order(sort)
+    
+    selected_date = get_date()
 
         
     list = tuple(arr)  ## contain Cateogry for search
-    selected_date = ' AND r.date = ' + str(session.query(RankList).order_by(desc('date')).first().id)
+ 
     
     
     key= str(keyword)
-    params = " AND r.itemName LIKE '%%" + key + "%%'"
+    params = " AND p.itemName LIKE '%%" + key + "%%'"
     
     if '0' in list : # if search in ALL category
       query = 'SELECT DISTINCT p.mediumImageUrls, p.itemPrice, p.reviewCount, p.itemUrl, p.itemName, p.reviewAverage, r.ranking AS product, r.itemCode  FROM amazon_product AS p INNER JOIN amazon_product_ranking AS r ON p.id = r.itemCode WHERE r.genreId  '

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, desc, BigInteger
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, desc, BigInteger, Float
 from sqlalchemy.orm import scoped_session, sessionmaker, relationship, backref, aliased
 from sqlalchemy.ext.declarative import declarative_base
 from marshmallow_sqlalchemy import ModelSchema
@@ -64,7 +64,7 @@ class rakuten_Product(Base):
     itemName = Column(String(100)) # item name from API
     itemUrl = Column(String(200)) # item URL from API
     reviewCount = Column(Integer) # item reviewCOunt from API
-    reviewAverage = Column(Integer) # item reviewAverage from API
+    reviewAverage = Column(Float) # item reviewAverage from API
     #itemInfo = relationship('rakuten_Ranking' , back_populates='product')
 
     def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
@@ -136,7 +136,7 @@ class yahoo_Product(Base):
     itemName = Column(String(100))
     itemUrl = Column(String(200))
     reviewCount = Column(Integer)
-    reviewAverage = Column(Integer)
+    reviewAverage = Column(Float)
     
     #itemInfo = relationship('yahoo_Ranking' , back_populates='product')
 
@@ -208,7 +208,7 @@ class amazon_Product(Base):
     itemName = Column(String(100)) # item name from API
     itemUrl = Column(String(900)) # item URL from API
     reviewCount = Column(Integer) # item reviewCOunt from API
-    reviewAverage = Column(Integer) # item reviewAverage from API
+    reviewAverage = Column(Float) # item reviewAverage from API
  
     def __init__(self, itemCode, mediumImageUrls, itemPrice, itemName, itemUrl, reviewCount, reviewAverage):
  
@@ -255,11 +255,13 @@ class RankList(Base):
     __tablename__ = 'ranklist'
     id = Column(Integer, primary_key=True)
     date = Column(BigInteger)
+    lock = Column(Integer)
 
-    def __init__(self, date):
+    def __init__(self, date, lock):
         self.date = date
+        self.lock = lock
     def __repr__(self):
-        return "<RankList(date = '%s')>" % (self.date)
+        return "<RankList(date = '%s', lock = '%s')>" % (self.date, self.lock)
 
 
 
@@ -445,7 +447,7 @@ def update_amazon_cate():
             addCate2 = amazon_Category(
             url3,
             '\t'+item2.text,
-            None,
+            addCate.id,
             2
             )
             session.add(
@@ -472,7 +474,7 @@ def update_rakuten_products():
     genList = []
     for cate in session.query(rakuten_Category).all(): # Load category list
         dict = cate.__dict__
-        dict.pop('_sa_instance_state', None) #filter
+        dict.pop('_sa_instance_state', None) # filter
         genList.append(dict)
         
     genList.append({'genreId': 0, 'parentId': None , 'cateName': 'ALL','id': len(genList) + 1 , 'depth': 0 }) # add root cateogry
@@ -622,7 +624,7 @@ def update_yahoo_products():
                   exists.first().mediumImageUrls = yahoo_itemInfo['Image']['Small']
                   exists.first().reviewAverage = val['Review']['Rate']
                   productId = exists.first().id # set id
-                  session.commit()
+                  
               else: # new
                   addProduct = yahoo_Product(
                   itemCode = y_item_code,
@@ -688,8 +690,13 @@ def update_amazon_products():
     done = len(list)
     for genre in list:
           progress += 1
-         
           
+          if(progress % 15 == 0):
+            print('wait for 10 sec...')
+            time.sleep(10)
+           
+            
+            
           if(len(genre) < 1 ): # if not eixsts -> pass
             errorCateList.append(progress)
             continue
@@ -700,7 +707,6 @@ def update_amazon_products():
               
               target = input_url + pageParam + str(page) # make address
              
-              print('\t\tconnect complete')
               resp = requests.get(target)
               soup = BeautifulSoup(resp.content, 'html.parser')
              
@@ -714,47 +720,48 @@ def update_amazon_products():
                 try:
                   p = re.compile('[0-9]+')
                   titleTemp = item.select('span > a > div')[0].text.strip() if len(item.select('span > a > div')[0].text.strip()) > 0 else 'None'
-                 
+
                   title = (titleTemp[:50] + '..') if len(titleTemp) > 50 else titleTemp # strip if too long
-                  
+
                   reviewAvg = item.select('span.a-icon-alt')[0].text if p.match(item.select('span.a-icon-alt')[0].text) != None else ('0')
-                  reviewCnt = item.select('a.a-size-small')[0].text if p.match(item.select('a.a-size-small')[0].text) != None else ('0')
-               
-                  price =  item.select('span.p13n-sc-price')[0].text if p.match( item.select('span.p13n-sc-price')[0].text) != None else ('0')
-                  
-               
+                  reviewCnt = item.select('a.a-size-small')[0].text.replace(',', '') if p.match(item.select('a.a-size-small')[0].text.replace(',', '')) != None else ('0')
+
+                  price =  item.select('span.p13n-sc-price')[0].text.replace('￥',' ') if  item.select('span.p13n-sc-price')[0].text[0] == '￥' else ('0')
+
+
                   link = item.select('a.a-link-normal')[0]['href']
                   img = item.select('span > a > span > div > img')[0]['src']
-                  print(title)
+                  #print(title)
                   exists = session.query(amazon_Product).filter_by(itemCode = title) # check exists
-                  
+
                   if(exists.scalar()): #if exists
                       exists.first().itemName = title
                       exists.first().mediumImageUrls = img
-                      exists.first().itemPrice = price
+                      exists.first().itemPrice = price.replace(',','').strip(' ')[0]
                       exists.first().itemCode = title
                       exists.first().itemUrl = link
                       exists.first().reviewCount = reviewCnt
                       exists.first().reviewAverage = reviewAvg.split(' ')[1]
                       productId = exists.first().id # set id
-                      session.commit()
+
                   else: # new
                       addProduct = amazon_Product(
                       itemCode = title,
                       mediumImageUrls = img,
-                      itemPrice = price,
+                      itemPrice = price.replace(',','').strip(' ')[0],
                       itemName = title,
                       itemUrl = 'https://amazon.co.jp' + link,
                       reviewCount = reviewCnt,
                       reviewAverage = reviewAvg.split(' ')[1]
                       )
-                      
+
                       session.add(
                       addProduct
                       )
                       session.commit()
+
                       productId = addProduct.id # set id
-                      
+
                   session.add( # add to ranking
                   amazon_Ranking(
                          itemCode = productId,
@@ -764,10 +771,10 @@ def update_amazon_products():
                          )
                   )
                   session.commit()
-                  print('insert complete')
+
 
                 except  IndexError:
-                  print('error')
+
                   errorItemList.append(item)
                   continue
          
@@ -785,20 +792,28 @@ def updateProducts():
 
     now = datetime.datetime.now()
     nowDate = now.strftime('%Y%m%d%H%M')# get now date
-   
-    #add now date to rank date list
-    session.add(
-    RankList(
-    date = int(nowDate)
+
+    
+    addRank = RankList(
+    date = int(nowDate),
+    lock = 1    #lock = 1 ==> don't load until products update done
     )
+    session.add(
+    addRank
     )
     session.commit()
+    
+    lockId = addRank.id
+    #add new date to DB
+ 
     
     update_rakuten_products()
     update_yahoo_products()
     update_amazon_products()
     
-
+    unlock = session.query(RankList).filter_by(id = lockId)
+    unlock.first().lock = 0
+    #unlock selected date
     
     print('products update completed... ' + nowDate + ' data created')
     
@@ -812,26 +827,16 @@ def updateCategories():
     print('categories update completed')
     
 
-def test():
-
-     list = []
-     for cate in session.query(rakuten_Category).all():
-         dict = cate.__dict__
-         dict.pop('_sa_instance_state', None)
-         #print(dict)
-         list.append(dict)
-     list.append({'genreId': 0, 'parentId': None , 'cateName': 'ALL','id': len(list) + 1 , 'depth': 0 })
-     print(list)
 
 
 ##============for testing==================
 
 #update_rakuten_cate()
-update_rakuten_products()
+#update_rakuten_products()
 #update_yahoo_cate()
 #update_yahoo_products()
 #update_amazon_cate()
-#update_amazon_products()
+update_amazon_products()
 
 ##=========================================
 
@@ -839,7 +844,6 @@ update_rakuten_products()
 #updateCategories()
 #updateProducts()
 
-#test()
 
 session.commit()
 session.close()
