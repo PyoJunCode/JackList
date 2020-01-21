@@ -160,12 +160,15 @@
     - flask code beautify 
     - amazon DB fixed
     
+  * 1/21
+    - amazon logic modified => reduce lag, exception => '0'
+    - DB semi final version
     
     
   * Todo
     - ranking tracker (using rank table)
-    - Threading
-    
+    - Threading (server performance issue)
+    - exception logic, update speed increase
     
 ---    
 
@@ -174,4 +177,4 @@
     - can't merge tables because amazon's itemUrl too long 
     - amazon exception (no price, avg etc... => just pass now)
     - **crawling getting slower => server die**
-    - amazon price selector problem
+    - amazon exception issue

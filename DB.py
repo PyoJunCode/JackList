@@ -30,7 +30,7 @@ Base = declarative_base()
 ##==================================================ORM CLASS===============================================
 
 ##FUNCTION ORDER : RAKUTEN - YAHOO - AMAZON  ,,,, CATEGORY - PRODUCT - PRODUCT RANKING
-##Comments
+##
 
 class rakuten_Category(Base):
 
@@ -215,6 +215,7 @@ class amazon_Product(Base):
 
         self.itemCode = itemCode
         self.mediumImageUrls = mediumImageUrls
+     
         self.itemPrice = itemPrice
         self.itemName = itemName
         self.itemUrl = itemUrl
@@ -464,6 +465,10 @@ def update_amazon_cate():
 
 
 ##===============================update rakuten products======================
+
+## load categories => get Products => parse => DB
+
+
 def update_rakuten_products():
 
     logger.info('update_rakuten_products_start')
@@ -483,7 +488,7 @@ def update_rakuten_products():
     done = len(genList)
    
     
-    for genre in genList:
+    for genre in genList: # each category
       progress += 1
 
       for page in range(1,5): # 1~4page 120 products
@@ -591,7 +596,7 @@ def update_yahoo_products():
       try:
         print('Yahoo: '+str(genre['cateName']) + ' ing...\t'+ str(progress) + '/' + str(done))
         getRanking = requests.get(yahoo_rankingBaseUrl+ str(genre['genreId']) + '&offset=0' ).json()
-      except:
+      except: # if category don't have data
         logger.info('\tfatal error in ' + str(progress) + ' category') #error
         errorCateList.append(genre)
         continue
@@ -680,6 +685,8 @@ def update_amazon_products():
     
     errorCateList =[]
     errorItemList = []
+    p = re.compile('[0-9]+') # Regular expression for int
+    s = re.compile('[^0-9]+') # Regular expression for not int
     
     list = []
     for cate in session.query(amazon_Category).all(): #query to dict
@@ -690,6 +697,10 @@ def update_amazon_products():
     done = len(list)
     for genre in list:
           progress += 1
+          
+#          if(progress < 350): # jumper
+#            continue
+
           
           if(progress % 15 == 0):
             print('wait for 10 sec...')
@@ -716,30 +727,53 @@ def update_amazon_products():
               menu = soup.select('.a-list-item > div') # css selector for menu name
              
               for item in  menu :
+              
               #@todo: complement exception logic (now: exception => just pass product)
-                try:
-                  p = re.compile('[0-9]+')
-                  titleTemp = item.select('span > a > div')[0].text.strip() if len(item.select('span > a > div')[0].text.strip()) > 0 else 'None'
+                  
+                  if len(item.select('span > a > div')) > 0 :
+                    titleTemp = item.select('span > a > div')[0].text.strip()
+                  else:
+                    titleTemp = ''
 
                   title = (titleTemp[:50] + '..') if len(titleTemp) > 50 else titleTemp # strip if too long
 
-                  reviewAvg = item.select('span.a-icon-alt')[0].text if p.match(item.select('span.a-icon-alt')[0].text) != None else ('0')
-                  reviewCnt = item.select('a.a-size-small')[0].text.replace(',', '') if p.match(item.select('a.a-size-small')[0].text.replace(',', '')) != None else ('0')
+                  if len(item.select('span.a-icon-alt')) > 0 :
+                    reviewAvg = item.select('span.a-icon-alt')[0].text if p.match(item.select('span.a-icon-alt')[0].text) != None else (' 0')
+                  else: reviewAvg = ' 0'
+                   
+                  if len(item.select('a.a-size-small')) > 0 :
+                    reviewCnt = item.select('a.a-size-small')[0].text.replace(',', '') if s.search(item.select('a.a-size-small')[0].text.replace(',', '')) == None else ('0')
+                  else:
+                    reviewCnt = '0'
+                    
+                  if len(item.select('span.p13n-sc-price')) > 0 :
+                    price = item.select('span.p13n-sc-price')[0].text.replace('￥',' ') if item.select('span.p13n-sc-price')[0].text[0] == '￥' else (' 0')
+                  else :
+                    price = ' 0'
 
-                  price =  item.select('span.p13n-sc-price')[0].text.replace('￥',' ') if  item.select('span.p13n-sc-price')[0].text[0] == '￥' else ('0')
-
-
-                  link = item.select('a.a-link-normal')[0]['href']
-                  img = item.select('span > a > span > div > img')[0]['src']
+                  if len(item.select('a.a-link-normal')) > 0 :
+                    link = item.select('a.a-link-normal')[0]['href']
+                  else:
+                    link = 'https://amazon.co.jp'
+                    
+                  if len(item.select('span > a > span > div > img')) > 0 :
+                    img = item.select('span > a > span > div > img')[0]['src']
+                  else :
+                    img = ''
+                 
                   #print(title)
                   exists = session.query(amazon_Product).filter_by(itemCode = title) # check exists
-
+                  #print(price + ' => '+price.replace(' ', '').replace(',',''))
+                  if '-' in price:
+                    price = price.split('-')[0]
+                    
+                    
                   if(exists.scalar()): #if exists
                       exists.first().itemName = title
                       exists.first().mediumImageUrls = img
-                      exists.first().itemPrice = price.replace(',','').strip(' ')[0]
+                      exists.first().itemPrice = price.replace(' ', '').replace(',','')
                       exists.first().itemCode = title
-                      exists.first().itemUrl = link
+                      exists.first().itemUrl = 'https://amazon.co.jp' + link
                       exists.first().reviewCount = reviewCnt
                       exists.first().reviewAverage = reviewAvg.split(' ')[1]
                       productId = exists.first().id # set id
@@ -748,7 +782,7 @@ def update_amazon_products():
                       addProduct = amazon_Product(
                       itemCode = title,
                       mediumImageUrls = img,
-                      itemPrice = price.replace(',','').strip(' ')[0],
+                      itemPrice = price.replace(' ', '').replace(',',''),
                       itemName = title,
                       itemUrl = 'https://amazon.co.jp' + link,
                       reviewCount = reviewCnt,
@@ -773,16 +807,13 @@ def update_amazon_products():
                   session.commit()
 
 
-                except  IndexError:
 
-                  errorItemList.append(item)
-                  continue
          
                 
 
     logger.info('amazon product update Complete!!')
     logger.info('Error category list: ' + str(errorCateList))
-    logger.info(len(errorItemList), ' Error item passed')
+#    logger.info(len(errorItemList), ' Error item passed')
 
 ##=====================================================================================================
 
@@ -836,7 +867,7 @@ def updateCategories():
 #update_yahoo_cate()
 #update_yahoo_products()
 #update_amazon_cate()
-update_amazon_products()
+#update_amazon_products()
 
 ##=========================================
 
