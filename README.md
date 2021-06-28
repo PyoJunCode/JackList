@@ -1,6 +1,11 @@
 # JackList Internship Web Development
 ### Build ALL-IN-ONE online shopping site by using API
-  Overall Structure : check PDF
+  Overall Structure : check [PDF](https://github.com/PyoJunCode/JackList/blob/master/jacklist_backend.pdf) <br>
+  
+  Rakuten, Yahoo shopping, Amazon 에서 상품 정보를 수집하여 전처리 과정을 거쳐 통일된 Database 생성 (MySQL) <br>
+  FLASK 를 사용해 Restful API 서버 구축하여 사용자의 요청에 대한 Data를 얻기 위한 Query 생성/ Data 반환 <br>
+  해당 Data를 node.js를 사용해 Parsing 후 Front-end로 전달 <br>
+  
 ---
 
 ## python dependency
