@@ -8,6 +8,14 @@
   
 ---
 
+## Files
+
+DB.py
+  - 카테고리, 상품 랭킹과 각 상품의 정보를 크롤링하여 MySQL server에 저장합니다. 
+app.py
+  - 사용자의 요청에 따라 그에 맞는 SQL문을 작성해 Data를 return해주는 Flask RESTful API Server입니다.
+
+
 ## python dependency
 
   * SQLAlchemy
